@@ -1,0 +1,199 @@
+@import url('https://fonts.googleapis.com/css2?family=Open+Sans:wght@300;400;600;700;800&family=Readex+Pro:wght@300;400;500;600;700&family=Source+Sans+3:wght@300;400;600;700;800&display=swap');
+@import "tailwindcss";
+
+:root {
+  /* Paleta de Colores */
+  --color-primary-cyan: #02B2C6;
+  --color-secondary-slate: #525862;
+  --color-text-gray: #777777;
+  --color-bg-white: #FFFFFF;
+  --color-overlay-white: rgba(255, 255, 255, 0.9);
+
+  /* Tipografía */
+  --font-main: 'Source Sans Pro', 'Open Sans', 'Source Sans 3', sans-serif;
+  --fw-light: 300;
+  --fw-regular: 400;
+  --fw-semibold: 600;
+  --fw-bold: 700;
+  --fw-extrabold: 800;
+
+  --background: var(--color-bg-white);
+  --foreground: var(--color-text-gray);
+  --color-primary: var(--color-primary-cyan);
+  --color-secondary: var(--color-secondary-slate);
+  --color-text: var(--color-text-gray);
+
+  /* ========================================================
+     SISTEMA TIPOGRÁFICO INTEGRADO
+     ======================================================== */
+  --font-family-base: var(--font-main);
+
+  /* Pesos Tipográficos */
+  --font-weight-light: 300;
+  --font-weight-regular: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+
+  /* Escala de Proporciones y Tamaños */
+  --font-size-hero: clamp(2.75rem, 5vw, 3.25rem); /* H1 (2.75rem a 3.25rem) */
+  --font-size-h2: clamp(1.85rem, 3.5vw, 2.25rem);  /* H2 (1.85rem a 2.25rem) */
+  --font-size-h3: 1.35rem;                         /* H3 */
+  --font-size-h4: 1.15rem;                         /* H4 */
+  --font-size-body: 1rem;                          /* Body (16px) */
+  --font-size-nav-btn: 0.95rem;                    /* Menú & Botones (15px) */
+  --font-size-eyebrow: 0.875rem;                   /* Eyebrow (14px) */
+  --font-size-aux: 0.85rem;                        /* Top Bar & Auxiliar (13.5px) */
+
+  /* Interlineados (Line-height) */
+  --line-height-tight: 1;
+  --line-height-hero: 1.2;
+  --line-height-h2: 1.35;
+  --line-height-card: 1.4;
+  --line-height-body: 1.65;
+
+  /* Espaciado entre Letras (Letter-spacing) */
+  --letter-spacing-tight: -0.02em;
+  --letter-spacing-subtle: -0.01em;
+  --letter-spacing-normal: 0em;
+  --letter-spacing-wide: 0.01em;
+}
+
+@theme inline {
+  --font-sans: var(--font-family-base);
+  --color-primary-cyan: var(--color-primary-cyan);
+  --color-secondary-slate: var(--color-secondary-slate);
+  --color-text-gray: var(--color-text-gray);
+  --color-bg-white: var(--color-bg-white);
+  --color-overlay-white: var(--color-overlay-white);
+}
+
+/* Configuración Base y Suavizado */
+html,
+body {
+  font-family: var(--font-family-base);
+  font-weight: var(--font-weight-regular);
+  font-size: var(--font-size-body);
+  line-height: var(--line-height-body);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+/* Título Principal / Hero (H1) */
+h1,
+.heading-hero {
+  font-family: var(--font-family-base);
+  font-size: var(--font-size-hero);
+  font-weight: var(--font-weight-bold);
+  line-height: var(--line-height-hero);
+  letter-spacing: var(--letter-spacing-tight);
+  text-transform: none; /* Capitalización normal sin forzar mayúsculas */
+}
+
+/* Títulos de Sección / Declaraciones (H2) */
+h2,
+.heading-section {
+  font-family: var(--font-family-base);
+  font-size: var(--font-size-h2);
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--line-height-h2);
+  letter-spacing: var(--letter-spacing-tight);
+  text-transform: none; /* Sentence case / Capitalización tipo oración */
+}
+
+/* Subtítulos de Tarjetas (H3, H4) */
+h3,
+.card-title {
+  font-family: var(--font-family-base);
+  font-size: var(--font-size-h3);
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--line-height-card);
+  letter-spacing: var(--letter-spacing-subtle);
+  text-transform: none;
+}
+
+h4,
+.card-subtitle {
+  font-family: var(--font-family-base);
+  font-size: var(--font-size-h4);
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--line-height-card);
+  letter-spacing: var(--letter-spacing-subtle);
+  text-transform: none;
+}
+
+/* Etiquetas Superiores / Eyebrow Text */
+.eyebrow-text,
+.badge-label {
+  font-family: var(--font-family-base);
+  font-size: var(--font-size-eyebrow);
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: var(--letter-spacing-wide);
+  line-height: 1.2;
+}
+
+/* Menú de Navegación (Navbar) y Botones */
+.nav-link,
+nav a,
+button,
+.btn {
+  font-family: var(--font-family-base);
+  font-size: var(--font-size-nav-btn);
+  font-weight: var(--font-weight-medium);
+  line-height: var(--line-height-tight);
+  letter-spacing: var(--letter-spacing-normal);
+  text-transform: none; /* Sin mayúsculas sostenidas */
+}
+
+/* Párrafos y Cuerpo de Texto (Body) */
+p,
+.body-text {
+  font-family: var(--font-family-base);
+  font-size: var(--font-size-body);
+  font-weight: var(--font-weight-regular);
+  line-height: var(--line-height-body);
+  letter-spacing: var(--letter-spacing-normal);
+}
+
+/* Barra Superior Informativa (Top Bar) y Textos Auxiliares */
+.top-bar,
+.text-auxiliary {
+  font-family: var(--font-family-base);
+  font-size: var(--font-size-aux);
+  font-weight: var(--font-weight-regular);
+  line-height: 1.4;
+}
+
+.top-bar strong,
+.top-bar a,
+.text-auxiliary-highlight {
+  font-weight: var(--font-weight-medium);
+}
+
+/* =========================================================================
+   SCROLLBAR PERSONALIZADO Y ELEGANTE PARA EL CHATBOT Y CONTENEDORES
+   ========================================================================= */
+.custom-chatbot-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: #02B2C6 #f1f5f9;
+}
+
+.custom-chatbot-scrollbar::-webkit-scrollbar {
+  height: 5px;
+  width: 5px;
+}
+
+.custom-chatbot-scrollbar::-webkit-scrollbar-track {
+  background: #f1f5f9;
+  border-radius: 9999px;
+}
+
+.custom-chatbot-scrollbar::-webkit-scrollbar-thumb {
+  background: #02B2C6;
+  border-radius: 9999px;
+}
+
+.custom-chatbot-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #029baa;
+}

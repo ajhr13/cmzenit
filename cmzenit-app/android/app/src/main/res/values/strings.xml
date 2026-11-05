@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">CMZenit Salud y Estetica</string>
+    <string name="title_activity_main">CMZenit Salud y Estetica</string>
+    <string name="package_name">com.cmzenit.app</string>
+    <string name="custom_url_scheme">com.cmzenit.app</string>
+</resources>
