@@ -146,6 +146,11 @@ export function PublicLandingView() {
   const [selectedServiceId, setSelectedServiceId] = useState<number>(services[0]?.id || 1)
   const [selectedDoctorId, setSelectedDoctorId] = useState<string>(doctors[0]?.id || '')
   const [appointmentDate, setAppointmentDate] = useState<string>('')
+  const [todayDateStr, setTodayDateStr] = useState<string>('')
+
+  useEffect(() => {
+    setTodayDateStr(new Date().toISOString().split('T')[0])
+  }, [])
   const [appointmentTime, setAppointmentTime] = useState<string>('09:00 AM')
   const [patientNameInput, setPatientNameInput] = useState<string | null>(null)
   const [patientCedulaInput, setPatientCedulaInput] = useState<string | null>(null)
@@ -715,7 +720,7 @@ export function PublicLandingView() {
                   </label>
                   <input
                     type="date"
-                    min={new Date().toISOString().split('T')[0]}
+                    min={todayDateStr || undefined}
                     value={appointmentDate}
                     onChange={(e) => setAppointmentDate(e.target.value)}
                     className="w-full px-3.5 py-2.5 rounded-md border border-gray-200 bg-white text-xs text-[#525862] focus:outline-none focus:ring-2 focus:ring-[#02B2C6]"

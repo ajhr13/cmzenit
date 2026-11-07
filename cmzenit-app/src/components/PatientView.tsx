@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { useCMZenit } from '@/context/CMZenitContext'
 import { Service, ClinicArea, MedicalRecord } from '@/types/database.types'
 import { RecipeModal } from '@/components/RecipeModal'
@@ -42,6 +42,11 @@ export function PatientView() {
   const [selectedService, setSelectedService] = useState<Service | null>(null)
   const [selectedDoctorId, setSelectedDoctorId] = useState('')
   const [bookingDate, setBookingDate] = useState('')
+  const [todayDateStr, setTodayDateStr] = useState<string>('')
+
+  useEffect(() => {
+    setTodayDateStr(new Date().toISOString().split('T')[0])
+  }, [])
   const [bookingTime, setBookingTime] = useState('09:00 AM')
   const [patientName, setPatientName] = useState(currentUser?.name || '')
   const [patientCedula, setPatientCedula] = useState(currentUser?.cedula || '')
@@ -656,7 +661,7 @@ export function PatientView() {
                     <input
                       type="date"
                       required
-                      min={new Date().toISOString().split('T')[0]}
+                      min={todayDateStr || undefined}
                       value={bookingDate}
                       onChange={(e) => setBookingDate(e.target.value)}
                       className="w-full py-2 px-3 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-xs sm:text-sm text-zinc-900 dark:text-zinc-100"
