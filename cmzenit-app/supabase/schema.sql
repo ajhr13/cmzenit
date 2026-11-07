@@ -359,5 +359,14 @@ VALUES
     )
 ON CONFLICT (id) DO NOTHING;
 
+-- Habilitar replicación en tiempo real para citas e historias médicas
+DO $$
+BEGIN
+    ALTER PUBLICATION supabase_realtime ADD TABLE public.appointments;
+    ALTER PUBLICATION supabase_realtime ADD TABLE public.medical_records;
+EXCEPTION
+    WHEN others THEN NULL;
+END $$;
+
 -- Confirmación de ejecución exitosa
 SELECT 'Base de datos CMZenit actualizada con éxito en Supabase.' AS status;

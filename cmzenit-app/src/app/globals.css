@@ -197,3 +197,39 @@ p,
 .custom-chatbot-scrollbar::-webkit-scrollbar-thumb:hover {
   background: #029baa;
 }
+
+/* =========================================================================
+   ESTILOS DE IMPRESIÓN OFICIAL PARA RÉCIPES MÉDICOS Y FICHAS CLÍNICAS
+   ========================================================================= */
+@media print {
+  body {
+    background: #ffffff !important;
+    color: #000000 !important;
+  }
+
+  body * {
+    visibility: hidden;
+  }
+
+  #printable-recipe,
+  #printable-recipe * {
+    visibility: visible;
+  }
+
+  #printable-recipe {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 24px !important;
+    background: #ffffff !important;
+    color: #000000 !important;
+    box-shadow: none !important;
+    border: none !important;
+  }
+
+  .no-print {
+    display: none !important;
+  }
+}

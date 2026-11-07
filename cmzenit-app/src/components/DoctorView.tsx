@@ -2,7 +2,8 @@
 
 import React, { useState, useMemo } from 'react'
 import { useCMZenit } from '@/context/CMZenitContext'
-import { MedicalRecordExam, Appointment } from '@/types/database.types'
+import { MedicalRecord, MedicalRecordExam, Appointment } from '@/types/database.types'
+import { RecipeModal } from '@/components/RecipeModal'
 import {
   Calendar,
   Clock,
@@ -23,6 +24,7 @@ import {
   AlertCircle,
   ChevronRight,
   ClipboardList,
+  Printer,
 } from 'lucide-react'
 
 interface UnifiedPatient {
@@ -58,6 +60,8 @@ export function DoctorView() {
   const [selectedPatientCedula, setSelectedPatientCedula] = useState<string | null>(null)
   const [selectedAppointmentId, setSelectedAppointmentId] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState<'todo' | 'historial' | 'evolucion'>('todo')
+  const [recipeModalOpen, setRecipeModalOpen] = useState(false)
+  const [selectedRecordForModal, setSelectedRecordForModal] = useState<MedicalRecord | null>(null)
 
   // Modal para agregar nuevo paciente
   const [isNewPatientModalOpen, setIsNewPatientModalOpen] = useState(false)
@@ -1233,6 +1237,18 @@ export function DoctorView() {
           </div>
         </div>
       )}
+      {/* MODAL DE RÉCIPE MÉDICO OFICIAL IMPRIMIBLE */}
+      <RecipeModal
+        isOpen={recipeModalOpen}
+        onClose={() => setRecipeModalOpen(false)}
+        record={selectedRecordForModal}
+        doctor={
+          doctors.find((d) => d.id === selectedRecordForModal?.doctor_id) || currentDoctor
+        }
+        patientName={activePatient?.name}
+        patientCedula={activePatient?.cedula}
+        patientPhone={activePatient?.phone}
+      />
     </div>
   )
 }

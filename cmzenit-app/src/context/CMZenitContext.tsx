@@ -593,11 +593,11 @@ export function CMZenitProvider({ children }: { children: ReactNode }) {
   // Rol activo derivado estrictamente del usuario logueado (o paciente si no hay sesión)
   const activeRole: UserRole = currentUser ? currentUser.role : 'paciente'
 
-  // Cargar datos de Supabase si está configurado en producción
+  // Cargar datos iniciales y activar sincronización en tiempo real (Supabase Realtime)
   useEffect(() => {
-    async function loadSupabaseData() {
-      if (!isSupabaseConfigured()) return
+    if (!isSupabaseConfigured()) return
 
+    async function loadSupabaseData() {
       try {
         const { data: srvs } = await supabase.from('services').select('*').order('id')
         if (srvs && srvs.length > 0) setServices(srvs)
@@ -616,6 +616,84 @@ export function CMZenitProvider({ children }: { children: ReactNode }) {
     }
 
     loadSupabaseData()
+
+    // 1. Canal Realtime para Citas y Check-in de Sala
+    const appointmentsChannel = supabase
+      .channel('realtime:appointments')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'appointments' },
+        (payload: any) => {
+          if (payload.eventType === 'INSERT') {
+            const newApt = payload.new as Appointment
+            setAppointments((prev) => {
+              if (prev.some((a) => a.id === newApt.id)) return prev
+              return [newApt, ...prev]
+            })
+            setNotifications((prev) => [
+              {
+                id: 'notif-rt-' + Date.now(),
+                title: 'Nueva Cita Registrada',
+                message: `${newApt.patient_name} agendó para ${newApt.appointment_date} (${newApt.appointment_time}).`,
+                time: 'Justo ahora',
+                type: 'appointment',
+                read: false,
+                appointmentId: newApt.id,
+              },
+              ...prev,
+            ])
+          } else if (payload.eventType === 'UPDATE') {
+            const updatedApt = payload.new as Appointment
+            setAppointments((prev) =>
+              prev.map((a) => (a.id === updatedApt.id ? updatedApt : a))
+            )
+
+            if (updatedApt.status === 'en_sala') {
+              setNotifications((prev) => [
+                {
+                  id: 'notif-rt-' + Date.now(),
+                  title: 'Paciente en Sala de Espera',
+                  message: `${updatedApt.patient_name} acaba de registrar su llegada (Check-in: ${updatedApt.check_in_time || 'Ahora'}).`,
+                  time: 'Justo ahora',
+                  type: 'check_in',
+                  read: false,
+                  appointmentId: updatedApt.id,
+                },
+                ...prev,
+              ])
+            }
+          } else if (payload.eventType === 'DELETE') {
+            const oldId = payload.old?.id
+            if (oldId) {
+              setAppointments((prev) => prev.filter((a) => a.id !== oldId))
+            }
+          }
+        }
+      )
+      .subscribe()
+
+    // 2. Canal Realtime para Historias Médicas y Récipes
+    const recordsChannel = supabase
+      .channel('realtime:medical_records')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'medical_records' },
+        (payload: any) => {
+          if (payload.eventType === 'INSERT') {
+            const newRec = payload.new as MedicalRecord
+            setMedicalRecords((prev) => {
+              if (prev.some((r) => r.id === newRec.id)) return prev
+              return [newRec, ...prev]
+            })
+          }
+        }
+      )
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(appointmentsChannel)
+      supabase.removeChannel(recordsChannel)
+    }
   }, [])
 
   const openAuthModal = (tab: 'signin' | 'signup' | 'forgot' = 'signin') => {
@@ -624,6 +702,15 @@ export function CMZenitProvider({ children }: { children: ReactNode }) {
   }
 
   const closeAuthModal = () => setIsAuthModalOpen(false)
+
+  const syncRoleCookie = (role: UserRole | null) => {
+    if (typeof document === 'undefined') return
+    if (role) {
+      document.cookie = `cmzenit_role=${role}; path=/; max-age=604800; SameSite=Lax`
+    } else {
+      document.cookie = 'cmzenit_role=; path=/; max-age=0; SameSite=Lax'
+    }
+  }
 
   // Iniciar sesión con Correo y Contraseña
   const loginWithEmail = async (email: string, pass: string) => {
@@ -649,6 +736,7 @@ export function CMZenitProvider({ children }: { children: ReactNode }) {
       }
 
       setCurrentUser(loggedUser)
+      syncRoleCookie(loggedUser.role)
       closeAuthModal()
       return { success: true }
     }
@@ -671,6 +759,7 @@ export function CMZenitProvider({ children }: { children: ReactNode }) {
     }
 
     setCurrentUser(newUser)
+    syncRoleCookie(newUser.role)
     closeAuthModal()
     return { success: true }
   }
@@ -715,6 +804,7 @@ export function CMZenitProvider({ children }: { children: ReactNode }) {
     }
 
     setCurrentUser(newUser)
+    syncRoleCookie(newUser.role)
     closeAuthModal()
     return { success: true }
   }
@@ -746,6 +836,7 @@ export function CMZenitProvider({ children }: { children: ReactNode }) {
     }
 
     setCurrentUser(logged)
+    syncRoleCookie(logged.role)
     closeAuthModal()
   }
 
@@ -753,6 +844,7 @@ export function CMZenitProvider({ children }: { children: ReactNode }) {
   const logout = async () => {
     await sbSignOut()
     setCurrentUser(null)
+    syncRoleCookie(null)
   }
 
   // Recuperar contraseña enviando correo de restablecimiento

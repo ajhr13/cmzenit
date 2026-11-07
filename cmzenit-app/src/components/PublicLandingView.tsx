@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
 import Link from 'next/link'
 import { useCMZenit } from '@/context/CMZenitContext'
 import {
@@ -136,7 +136,7 @@ const HERO_SLIDES = [
 ]
 
 export function PublicLandingView() {
-  const { services, doctors, currentUser, bookAppointment, openAuthModal } = useCMZenit()
+  const { services, doctors, appointments, currentUser, bookAppointment, openAuthModal } = useCMZenit()
 
   // Slider State
   const [currentSlide, setCurrentSlide] = useState(0)
@@ -157,6 +157,48 @@ export function PublicLandingView() {
 
   const [isBookingSubmitting, setIsBookingSubmitting] = useState(false)
   const [bookingSuccessMsg, setBookingSuccessMsg] = useState('')
+
+  const CLINIC_SLOTS = [
+    '08:00 AM',
+    '08:30 AM',
+    '09:00 AM',
+    '09:30 AM',
+    '10:00 AM',
+    '10:30 AM',
+    '11:00 AM',
+    '11:30 AM',
+    '01:00 PM',
+    '01:30 PM',
+    '02:00 PM',
+    '02:30 PM',
+    '03:00 PM',
+    '03:30 PM',
+    '04:00 PM',
+    '04:30 PM',
+  ]
+
+  // Turnos ocupados para el especialista y fecha seleccionados
+  const occupiedSlots = useMemo(() => {
+    if (!selectedDoctorId || !appointmentDate) return []
+    return appointments
+      .filter(
+        (a) =>
+          a.doctor_id === selectedDoctorId &&
+          a.appointment_date === appointmentDate &&
+          a.status !== 'cancelada'
+      )
+      .map((a) => a.appointment_time)
+  }, [appointments, selectedDoctorId, appointmentDate])
+
+  const availableSlots = useMemo(() => {
+    return CLINIC_SLOTS.filter((time) => !occupiedSlots.includes(time))
+  }, [occupiedSlots])
+
+  useEffect(() => {
+    if (occupiedSlots.includes(appointmentTime) && availableSlots.length > 0) {
+      setAppointmentTime(availableSlots[0])
+    }
+  }, [occupiedSlots, availableSlots, appointmentTime])
 
   // Auto slide every 7 seconds
   useEffect(() => {
@@ -673,6 +715,7 @@ export function PublicLandingView() {
                   </label>
                   <input
                     type="date"
+                    min={new Date().toISOString().split('T')[0]}
                     value={appointmentDate}
                     onChange={(e) => setAppointmentDate(e.target.value)}
                     className="w-full px-3.5 py-2.5 rounded-md border border-gray-200 bg-white text-xs text-[#525862] focus:outline-none focus:ring-2 focus:ring-[#02B2C6]"
@@ -687,13 +730,14 @@ export function PublicLandingView() {
                     onChange={(e) => setAppointmentTime(e.target.value)}
                     className="w-full px-3.5 py-2.5 rounded-md border border-gray-200 bg-white text-xs text-[#525862] focus:outline-none focus:ring-2 focus:ring-[#02B2C6]"
                   >
-                    <option value="08:30 AM">08:30 AM</option>
-                    <option value="09:00 AM">09:00 AM</option>
-                    <option value="10:00 AM">10:00 AM</option>
-                    <option value="11:00 AM">11:00 AM</option>
-                    <option value="02:00 PM">02:00 PM</option>
-                    <option value="03:30 PM">03:30 PM</option>
-                    <option value="04:30 PM">04:30 PM</option>
+                    {CLINIC_SLOTS.map((slot) => {
+                      const isOccupied = occupiedSlots.includes(slot)
+                      return (
+                        <option key={slot} value={slot} disabled={isOccupied}>
+                          {slot} {isOccupied ? '❌ (Ocupado)' : '✓ (Disponible)'}
+                        </option>
+                      )
+                    })}
                   </select>
                 </div>
               </div>

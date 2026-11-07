@@ -2,7 +2,8 @@
 
 import React, { useState } from 'react'
 import { useCMZenit } from '@/context/CMZenitContext'
-import { Service, ClinicArea } from '@/types/database.types'
+import { Service, ClinicArea, MedicalRecord } from '@/types/database.types'
+import { RecipeModal } from '@/components/RecipeModal'
 import {
   Calendar,
   Clock,
@@ -10,6 +11,7 @@ import {
   CheckCircle,
   FileText,
   Download,
+  Printer,
   Sparkles,
   Stethoscope,
   X,
@@ -46,10 +48,40 @@ export function PatientView() {
   const [patientPhone, setPatientPhone] = useState(currentUser?.phone || '')
   const [bookingSuccess, setBookingSuccess] = useState(false)
 
+  const CLINIC_SLOTS = [
+    '08:00 AM',
+    '08:30 AM',
+    '09:00 AM',
+    '09:30 AM',
+    '10:00 AM',
+    '10:30 AM',
+    '11:00 AM',
+    '11:30 AM',
+    '01:00 PM',
+    '01:30 PM',
+    '02:00 PM',
+    '02:30 PM',
+    '03:00 PM',
+    '03:30 PM',
+    '04:00 PM',
+    '04:30 PM',
+  ]
+
+  const occupiedBookingSlots = appointments
+    .filter(
+      (a) =>
+        a.doctor_id === selectedDoctorId &&
+        a.appointment_date === bookingDate &&
+        a.status !== 'cancelada'
+    )
+    .map((a) => a.appointment_time)
+
   // Modal Solicitar Cancelación
   const [isCancelModalOpen, setIsCancelModalOpen] = useState(false)
   const [appointmentToCancelId, setAppointmentToCancelId] = useState<string | null>(null)
   const [cancelReason, setCancelReason] = useState('')
+  const [isRecipeModalOpen, setIsRecipeModalOpen] = useState(false)
+  const [selectedRecipeRecord, setSelectedRecipeRecord] = useState<MedicalRecord | null>(null)
 
   const isEstetica = activeArea === 'estetica'
 
@@ -346,17 +378,17 @@ export function PatientView() {
                   </div>
                 </div>
 
-                {rec.recipe_file_url && (
-                  <a
-                    href={rec.recipe_file_url}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 hover:bg-zinc-800 transition"
-                  >
-                    <Download className="w-3.5 h-3.5" />
-                    Descargar Récipe PDF
-                  </a>
-                )}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSelectedRecipeRecord(rec)
+                    setIsRecipeModalOpen(true)
+                  }}
+                  className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold bg-[#02B2C6] text-white hover:bg-[#029baa] shadow-sm transition cursor-pointer"
+                >
+                  <Printer className="w-3.5 h-3.5" />
+                  <span>Ver / Imprimir Récipe Oficial</span>
+                </button>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
@@ -624,7 +656,7 @@ export function PatientView() {
                     <input
                       type="date"
                       required
-                      min={bookingDate || undefined}
+                      min={new Date().toISOString().split('T')[0]}
                       value={bookingDate}
                       onChange={(e) => setBookingDate(e.target.value)}
                       className="w-full py-2 px-3 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-xs sm:text-sm text-zinc-900 dark:text-zinc-100"
@@ -755,6 +787,16 @@ export function PatientView() {
           </div>
         </div>
       )}
+      {/* MODAL DE RÉCIPE MÉDICO OFICIAL IMPRIMIBLE */}
+      <RecipeModal
+        isOpen={isRecipeModalOpen}
+        onClose={() => setIsRecipeModalOpen(false)}
+        record={selectedRecipeRecord}
+        doctor={doctors.find((d) => d.id === selectedRecipeRecord?.doctor_id)}
+        patientName={currentUser?.name}
+        patientCedula={currentUser?.cedula}
+        patientPhone={currentUser?.phone}
+      />
     </div>
   )
 }
