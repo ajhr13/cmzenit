@@ -14,8 +14,6 @@ import {
   Heart,
   Star,
   ShieldCheck,
-  Award,
-  Stethoscope,
 } from 'lucide-react'
 import { WhatsAppIcon, InstagramIcon } from '@/components/SocialIcons'
 
@@ -325,39 +323,8 @@ export default function EsteticaPage() {
         </div>
       </section>
 
-      {/* Miniaturas de Acceso Rápido del Carrusel */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 pt-6">
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
-          {AESTHETIC_SLIDES.map((slide, idx) => {
-            const isActive = currentSlideIndex === idx
-            return (
-              <button
-                key={slide.id}
-                onClick={() => {
-                  setCurrentSlideIndex(idx)
-                  setSelectedFilter(slide.filterTag)
-                }}
-                className={`p-2.5 rounded-xl text-left border transition cursor-pointer flex flex-col justify-between ${
-                  isActive
-                    ? 'border-[#02B2C6] bg-cyan-50/70 dark:bg-cyan-950/40 shadow-sm'
-                    : 'border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 hover:border-[#02B2C6]/40'
-                }`}
-              >
-                <div className="flex items-center justify-between mb-1">
-                  <Sparkles className={`w-4 h-4 ${isActive ? 'text-[#02B2C6]' : 'text-[#777777]'}`} />
-                  <span className="text-[10px] font-mono text-slate-400">0{idx + 1}</span>
-                </div>
-                <span className={`text-[11px] font-bold leading-tight line-clamp-1 ${isActive ? 'text-[#02B2C6]' : 'text-[#525862] dark:text-zinc-200'}`}>
-                  {slide.badge}
-                </span>
-              </button>
-            )
-          })}
-        </div>
-      </section>
-
       {/* 3. SHOWCASE DETALLADO DEL VOLANTE CMZENIT */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6">
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 pt-6">
         <div className="relative overflow-hidden rounded-3xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-6 sm:p-10 shadow-xl">
           {/* Encabezado con Logo Oficial de Zenit */}
           <div className="flex flex-col sm:flex-row items-center justify-between gap-6 pb-8 border-b border-slate-100 dark:border-zinc-800">
@@ -607,52 +574,7 @@ export default function EsteticaPage() {
         )}
       </section>
 
-      {/* 5. ENLACES RÁPIDOS A ESPECIALIDADES Y CUERPO MÉDICO */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <Link
-            href="/especialidades"
-            className="group bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-3xl p-6 sm:p-8 hover:shadow-lg hover:border-[#02B2C6]/50 transition flex items-center justify-between"
-          >
-            <div className="space-y-1">
-              <span className="text-[10px] font-extrabold uppercase tracking-widest text-[#02B2C6]">
-                Salud & Hospitalización
-              </span>
-              <h3 className="text-lg font-black text-[#525862] dark:text-white group-hover:text-[#02B2C6] transition">
-                Especialidades Médicas Clínicas
-              </h3>
-              <p className="text-xs text-[#777777] dark:text-zinc-400 max-w-sm leading-[1.6]">
-                Consulta general, oftalmología, ginecología, hospitalización 24/7 y odontología.
-              </p>
-            </div>
-            <div className="w-10 h-10 rounded-2xl bg-[#02B2C6] text-white flex items-center justify-center shrink-0 shadow-md">
-              <Stethoscope className="w-5 h-5" />
-            </div>
-          </Link>
-
-          <Link
-            href="/cuerpo-medico"
-            className="group bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-3xl p-6 sm:p-8 hover:shadow-lg hover:border-[#02B2C6]/50 transition flex items-center justify-between"
-          >
-            <div className="space-y-1">
-              <span className="text-[10px] font-extrabold uppercase tracking-widest text-[#02B2C6]">
-                Staff Profesional
-              </span>
-              <h3 className="text-lg font-black text-[#525862] dark:text-white group-hover:text-[#02B2C6] transition">
-                Cuerpo Médico & Cosmiatras
-              </h3>
-              <p className="text-xs text-[#777777] dark:text-zinc-400 max-w-sm leading-[1.6]">
-                Conoce las acreditaciones MPPS y el perfil de cada especialista de Zenit.
-              </p>
-            </div>
-            <div className="w-10 h-10 rounded-2xl bg-[#525862] text-white flex items-center justify-center shrink-0 shadow-md">
-              <Award className="w-5 h-5" />
-            </div>
-          </Link>
-        </div>
-      </section>
-
-      {/* 6. BANNER DE ASISTENCIA TELEFÓNICA CON LOGOS DE WHATSAPP E INSTAGRAM */}
+      {/* 5. BANNER DE ASISTENCIA TELEFÓNICA CON LOGOS DE WHATSAPP E INSTAGRAM */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6">
         <div className="bg-[#525862] text-white p-6 sm:p-8 rounded-3xl flex flex-col md:flex-row items-center justify-between gap-6 shadow-xl">
           <div className="flex items-center gap-4">

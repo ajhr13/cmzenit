@@ -246,38 +246,8 @@ export default function CuerpoMedicoPage() {
         </section>
       )}
 
-      {/* Miniaturas de Acceso Rápido del Carrusel */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 pt-6">
-        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-2">
-          {doctors.map((d, idx) => {
-            const isActive = currentSlideIndex === idx
-            return (
-              <button
-                key={d.id}
-                onClick={() => setCurrentSlideIndex(idx)}
-                className={`p-2.5 rounded-xl text-left border transition cursor-pointer flex flex-col justify-between ${
-                  isActive
-                    ? 'border-[#02B2C6] bg-cyan-50/70 dark:bg-cyan-950/40 shadow-sm'
-                    : 'border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 hover:border-[#02B2C6]/40'
-                }`}
-              >
-                <div className="flex items-center justify-between mb-1">
-                  <span className="text-[10px] font-mono text-slate-400">0{idx + 1}</span>
-                  <span className={`text-[9px] font-bold uppercase ${d.area === 'estetica' ? 'text-pink-500' : 'text-[#02B2C6]'}`}>
-                    {d.area === 'estetica' ? 'Estética' : 'Salud'}
-                  </span>
-                </div>
-                <span className={`text-[11px] font-bold leading-tight line-clamp-1 ${isActive ? 'text-[#02B2C6]' : 'text-[#525862] dark:text-zinc-200'}`}>
-                  {d.name.replace('Dra. ', '').replace('Dr. ', '')}
-                </span>
-              </button>
-            )
-          })}
-        </div>
-      </section>
-
       {/* 3. BARRA DE FILTROS Y BÚSQUEDA */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6">
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 pt-6">
         <div className="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-2xl p-4 shadow-sm flex flex-col lg:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-1.5 overflow-x-auto w-full lg:w-auto pb-2 lg:pb-0 scrollbar-thin">
             {[

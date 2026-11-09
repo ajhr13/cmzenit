@@ -14,7 +14,7 @@ export function Providers({ children }: { children: ReactNode }) {
         <Navbar />
         <AuthModal />
         <Chatbot />
-        <main className="flex-1 w-full">
+        <main className="flex-1 w-full pb-16 md:pb-0">
           {children}
         </main>
         <Footer />

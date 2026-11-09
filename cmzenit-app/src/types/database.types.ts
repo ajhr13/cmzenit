@@ -8,6 +8,54 @@ export type AppointmentStatus =
   | 'solicitud_cancelacion'
   | 'cancelada'
 
+export type PaymentStatus = 'pendiente' | 'pagado' | 'exonerado'
+export type PaymentMethod =
+  | 'pago_movil'
+  | 'zelle'
+  | 'transferencia'
+  | 'punto_venta'
+  | 'efectivo_usd'
+  | 'efectivo_bs'
+
+export interface VitalSigns {
+  blood_pressure?: string // ej: "120/80 mmHg"
+  heart_rate?: string // ej: "72 lpm"
+  respiratory_rate?: string // ej: "16 rpm"
+  temperature?: string // ej: "36.6 °C"
+  oxygen_saturation?: string // ej: "98 %"
+  weight_kg?: number // ej: 70
+  height_cm?: number // ej: 172
+  bmi?: number // ej: 23.7 (Calculado: peso / (talla/100)^2)
+}
+
+export interface MedicalRecordAttachment {
+  name: string
+  file_url: string
+  file_type?: string
+  size_kb?: number
+  uploaded_at: string
+}
+
+export interface PatientClinicalProfile {
+  cedula: string
+  fullName: string
+  email: string
+  phone: string
+  gender: 'Masculino' | 'Femenino' | 'Otro' | ''
+  birthDate?: string
+  address: string
+  emergencyContact: string
+  emergencyPhone?: string
+  weightKg?: number
+  heightCm?: number
+  bloodType?: string
+  chronicDiseases: string
+  allergies: string
+  surgicalHistory?: string
+  currentMedications?: string
+  updatedAt?: string
+}
+
 export interface Profile {
   id: string
   full_name: string
@@ -59,6 +107,13 @@ export interface Appointment {
   check_in_time: string | null
   cancellation_reason: string | null
   whatsapp_notified: boolean
+  // Módulo de Cobranzas y Pagos
+  payment_status?: PaymentStatus
+  payment_method?: PaymentMethod
+  payment_amount_usd?: number
+  payment_amount_bs?: number
+  payment_reference?: string
+  payment_date?: string
   created_at: string
 }
 
@@ -84,6 +139,11 @@ export interface MedicalRecord {
   treatment: string
   recipe_file_url: string | null
   exams_json: MedicalRecordExam[]
+  // Módulo de Signos Vitales y Alergias Críticas
+  vital_signs?: VitalSigns
+  allergies?: string[]
+  // Módulo de Archivos Médicos y Dermoestéticos
+  attachments?: MedicalRecordAttachment[]
   created_at: string
 }
 
@@ -163,6 +223,12 @@ export interface Database {
           check_in_time?: string | null
           cancellation_reason?: string | null
           whatsapp_notified?: boolean
+          payment_status?: PaymentStatus
+          payment_method?: PaymentMethod
+          payment_amount_usd?: number
+          payment_amount_bs?: number
+          payment_reference?: string
+          payment_date?: string
           created_at?: string
         }
         Update: Partial<Appointment>
@@ -184,6 +250,9 @@ export interface Database {
           treatment: string
           recipe_file_url?: string | null
           exams_json?: MedicalRecordExam[] | Json
+          vital_signs?: VitalSigns | Json
+          allergies?: string[] | Json
+          attachments?: MedicalRecordAttachment[] | Json
           created_at?: string
         }
         Update: Partial<MedicalRecord>
@@ -200,6 +269,8 @@ export interface Database {
       user_role: UserRole
       clinic_area: ClinicArea
       appointment_status: AppointmentStatus
+      payment_status: PaymentStatus
+      payment_method: PaymentMethod
     }
     CompositeTypes: {
       [_ in never]: never

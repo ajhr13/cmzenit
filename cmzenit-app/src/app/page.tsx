@@ -1,28 +1,17 @@
 'use client'
 
 import React from 'react'
-import { useCMZenit } from '@/context/CMZenitContext'
 import { PublicLandingView } from '@/components/PublicLandingView'
-import { PatientView } from '@/components/PatientView'
-import { SecretaryView } from '@/components/SecretaryView'
-import { DoctorView } from '@/components/DoctorView'
-import { AdminView } from '@/components/AdminView'
 
+/**
+ * Página Principal (Inicio) de Grupo Médico Zenit
+ * Siempre renderiza la página web oficial completa de la clínica para que cualquier visitante,
+ * paciente registrado o miembro del personal médico pueda consultar especialidades, doctores,
+ * espacio de estética, ubicación y agendamiento sin perder la vista del sitio web.
+ *
+ * El acceso a los paneles de trabajo según rol se gestiona a través del Sub-menú de Operaciones
+ * que aparece automáticamente al iniciar sesión.
+ */
 export default function Home() {
-  const { currentUser } = useCMZenit()
-
-  // 1. Visitante público sin sesión iniciada -> PublicLandingView con diseño MedicalGuide
-  if (!currentUser) {
-    return <PublicLandingView />
-  }
-
-  // 2. Navegación automática según el rol del usuario conectado (RBAC estricto)
-  return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
-      {currentUser.role === 'secretaria' && <SecretaryView />}
-      {currentUser.role === 'doctor' && <DoctorView />}
-      {currentUser.role === 'admin' && <AdminView />}
-      {currentUser.role === 'paciente' && <PatientView />}
-    </div>
-  )
+  return <PublicLandingView />
 }

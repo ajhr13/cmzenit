@@ -19,25 +19,21 @@ import {
   X,
 } from 'lucide-react'
 import { WhatsAppIcon, InstagramIcon } from '@/components/SocialIcons'
+import { RoleSubNavbar } from '@/components/RoleSubNavbar'
 
 export function Navbar() {
   const pathname = usePathname()
   const { currentUser, openAuthModal, logout } = useCMZenit()
 
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false)
-  const [isLoginMenuOpen, setIsLoginMenuOpen] = useState(false)
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const userMenuRef = useRef<HTMLDivElement>(null)
-  const loginMenuRef = useRef<HTMLDivElement>(null)
 
   // Cerrar menús al hacer clic afuera
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (userMenuRef.current && !userMenuRef.current.contains(event.target as Node)) {
         setIsUserMenuOpen(false)
-      }
-      if (loginMenuRef.current && !loginMenuRef.current.contains(event.target as Node)) {
-        setIsLoginMenuOpen(false)
       }
     }
     document.addEventListener('mousedown', handleClickOutside)
@@ -195,8 +191,12 @@ export function Navbar() {
               Cuerpo Médico
             </Link>
             <Link
-              href="/#contacto-info"
-              className="px-4 py-2.5 rounded-md text-[#777777] hover:text-[#02B2C6] transition"
+              href="/contacto"
+              className={`px-4 py-2.5 rounded-md transition ${
+                pathname === '/contacto'
+                  ? 'bg-[#02B2C6] text-white shadow-sm font-bold'
+                  : 'text-[#777777] hover:text-[#02B2C6]'
+              }`}
             >
               Contacto
             </Link>
@@ -266,76 +266,15 @@ export function Navbar() {
               </div>
             ) : (
               <div className="flex items-center gap-2">
-                {/* Menú Desplegable de los 3 Portales de Ingreso */}
-                <div className="relative" ref={loginMenuRef}>
-                  <button
-                    onClick={() => setIsLoginMenuOpen(!isLoginMenuOpen)}
-                    className="flex items-center gap-1 px-3 py-2 text-xs font-semibold text-[#777777] hover:text-[#02B2C6] rounded-md transition cursor-pointer"
-                  >
-                    <span>Ingresar</span>
-                    <ChevronDown className="w-3.5 h-3.5" />
-                  </button>
-
-                  {isLoginMenuOpen && (
-                    <div className="absolute right-0 mt-2 w-64 bg-white border border-gray-100 rounded-2xl shadow-xl p-2 z-50 animate-in fade-in space-y-1">
-                      <div className="px-3 py-1.5 border-b border-gray-100">
-                        <span className="text-[10px] font-bold uppercase tracking-wider text-[#02B2C6]">
-                          Portales de Acceso CMZenit
-                        </span>
-                      </div>
-
-                      <Link
-                        href="/login"
-                        onClick={() => setIsLoginMenuOpen(false)}
-                        className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-cyan-50/70 text-left transition group"
-                      >
-                        <div className="w-8 h-8 rounded-lg bg-cyan-50 text-[#02B2C6] flex items-center justify-center shrink-0">
-                          <User className="w-4 h-4" />
-                        </div>
-                        <div>
-                          <p className="text-xs font-bold text-[#525862] group-hover:text-[#02B2C6]">
-                            Portal Pacientes
-                          </p>
-                          <p className="text-[10px] text-[#777777]">Clientes y Citas Médicas</p>
-                        </div>
-                      </Link>
-
-                      <Link
-                        href="/login/personal"
-                        onClick={() => setIsLoginMenuOpen(false)}
-                        className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-slate-50 text-left transition group"
-                      >
-                        <div className="w-8 h-8 rounded-lg bg-slate-100 text-[#525862] flex items-center justify-center shrink-0">
-                          <Stethoscope className="w-4 h-4" />
-                        </div>
-                        <div>
-                          <p className="text-xs font-bold text-[#525862] group-hover:text-[#02B2C6]">
-                            Personal Clínico
-                          </p>
-                          <p className="text-[10px] text-[#777777]">Doctores y Secretaría</p>
-                        </div>
-                      </Link>
-
-                      <div className="border-t border-gray-100 my-1" />
-
-                      <Link
-                        href="/admin/login"
-                        onClick={() => setIsLoginMenuOpen(false)}
-                        className="flex items-center gap-3 px-3 py-2 rounded-xl hover:bg-slate-50 text-left transition group"
-                      >
-                        <div className="w-7 h-7 rounded-lg bg-slate-900 text-white flex items-center justify-center shrink-0">
-                          <Shield className="w-3.5 h-3.5 text-[#02B2C6]" />
-                        </div>
-                        <div>
-                          <p className="text-xs font-bold text-[#525862] group-hover:text-[#02B2C6]">
-                            Dirección Médica
-                          </p>
-                          <p className="text-[9px] text-[#777777]">Administración y Gestión</p>
-                        </div>
-                      </Link>
-                    </div>
-                  )}
-                </div>
+                {/* Acceso Directo y Exclusivo para Pacientes */}
+                <Link
+                  href="/login"
+                  className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold text-[#525862] hover:text-[#02B2C6] bg-slate-50 hover:bg-cyan-50/60 border border-slate-200 hover:border-cyan-200 rounded-md transition shadow-2xs"
+                  title="Acceso exclusivo para pacientes de Grupo Médico Zenit"
+                >
+                  <User className="w-3.5 h-3.5 text-[#02B2C6]" />
+                  <span>Mi Portal Paciente</span>
+                </Link>
 
                 <Link
                   href="/#agendar-cita"
@@ -405,38 +344,24 @@ export function Navbar() {
               Agendar Cita en Línea
             </Link>
             <Link
-              href="/#contacto-info"
+              href="/contacto"
               onClick={() => setIsMobileMenuOpen(false)}
-              className="block px-3 py-2 rounded-md text-xs font-semibold uppercase text-[#777777] hover:bg-slate-50"
+              className={`block px-3 py-2 rounded-md text-xs font-semibold uppercase ${
+                pathname === '/contacto' ? 'bg-[#02B2C6] text-white' : 'text-[#777777] hover:bg-slate-50'
+              }`}
             >
               Contacto
             </Link>
 
             {!currentUser && (
-              <div className="pt-2 mt-2 border-t border-gray-100 space-y-1">
-                <span className="text-[10px] uppercase font-bold text-gray-400 block px-3">
-                  Portales de Acceso
-                </span>
+              <div className="pt-2 mt-2 border-t border-gray-100">
                 <Link
                   href="/login"
                   onClick={() => setIsMobileMenuOpen(false)}
-                  className="block px-3 py-2 rounded-md text-xs font-semibold text-[#02B2C6] hover:bg-cyan-50"
+                  className="flex items-center gap-2 px-3 py-2.5 rounded-md text-xs font-bold text-[#02B2C6] bg-cyan-50/70 border border-cyan-100"
                 >
-                  👤 Portal Pacientes (Clientes)
-                </Link>
-                <Link
-                  href="/login/personal"
-                  onClick={() => setIsMobileMenuOpen(false)}
-                  className="block px-3 py-2 rounded-md text-xs font-semibold text-[#525862] hover:bg-slate-50"
-                >
-                  🩺 Personal Médico & Recepción
-                </Link>
-                <Link
-                  href="/admin/login"
-                  onClick={() => setIsMobileMenuOpen(false)}
-                  className="block px-3 py-2 rounded-md text-xs font-semibold text-[#525862] hover:bg-slate-50"
-                >
-                  🛡️ Dirección Médica (Admin)
+                  <User className="w-4 h-4 text-[#02B2C6]" />
+                  <span>Mi Portal Paciente (Iniciar Sesión)</span>
                 </Link>
               </div>
             )}
@@ -463,6 +388,9 @@ export function Navbar() {
           </div>
         )}
       </div>
+
+      {/* 3. SUB-MENÚ OPERATIVO POR ROL (Aparece abajo cuando el usuario ha iniciado sesión) */}
+      <RoleSubNavbar />
     </header>
   )
 }

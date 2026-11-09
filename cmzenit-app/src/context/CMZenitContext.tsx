@@ -7,7 +7,13 @@ import {
   Service,
   Doctor,
   Appointment,
+  AppointmentStatus,
   MedicalRecord,
+  PaymentStatus,
+  PaymentMethod,
+  VitalSigns,
+  MedicalRecordAttachment,
+  PatientClinicalProfile,
 } from '@/types/database.types'
 import {
   isSupabaseConfigured,
@@ -81,14 +87,23 @@ interface CMZenitContextType {
   // Acciones Citas
   bookAppointment: (params: {
     serviceId: number
-    doctorId: string
+    doctorId?: string | null
     date: string
     time: string
     patientName?: string
     patientCedula?: string
     patientPhone?: string
     area: ClinicArea
+    status?: AppointmentStatus
   }) => Promise<{ success: boolean; appointment?: Appointment; error?: string }>
+  validateAndConfirmAppointment: (
+    appointmentId: string,
+    assignedDoctorId?: string | null
+  ) => Promise<{ success: boolean; appointment?: Appointment }>
+  dismissUnconfirmedAppointment: (
+    appointmentId: string,
+    reason?: string
+  ) => Promise<void>
   requestCancellation: (appointmentId: string, reason: string) => Promise<void>
   confirmCheckIn: (appointmentId: string) => Promise<void>
   cancelAppointmentWithNotice: (
@@ -111,6 +126,34 @@ interface CMZenitContextType {
   markNotificationAsRead: (id: string) => void
   clearNotifications: () => void
   unreadNotificationsCount: number
+
+  // Módulo de Caja y Tasa del Día
+  exchangeRate: number
+  setExchangeRate: (rate: number) => void
+  updateAppointmentPayment: (
+    appointmentId: string,
+    payment: {
+      status: PaymentStatus
+      method?: PaymentMethod
+      amount_usd?: number
+      amount_bs?: number
+      reference?: string
+    }
+  ) => Promise<void>
+
+  // Módulo de Alergias Críticas
+  patientAllergiesMap: Record<string, string[]>
+  updatePatientAllergies: (patientCedula: string, allergies: string[]) => void
+
+  // Módulo de Ficha y Perfil Clínico del Paciente
+  patientProfiles: Record<string, PatientClinicalProfile>
+  getPatientProfile: (cedula?: string) => PatientClinicalProfile
+  savePatientProfile: (profile: PatientClinicalProfile) => Promise<void>
+
+  // Subida de Archivos Médicos / Dermoestéticos
+  uploadMedicalAttachment: (
+    file: File
+  ) => Promise<{ url: string; name: string; size_kb: number; type: string }>
 }
 
 // Datos semilla de respaldo
@@ -428,6 +471,12 @@ const INITIAL_APPOINTMENTS: Appointment[] = [
     check_in_time: '08:48 AM',
     cancellation_reason: null,
     whatsapp_notified: true,
+    payment_status: 'pagado',
+    payment_method: 'pago_movil',
+    payment_amount_usd: 30,
+    payment_amount_bs: 1155,
+    payment_reference: 'REF-94021',
+    payment_date: new Date().toISOString(),
     created_at: new Date().toISOString(),
   },
   {
@@ -445,6 +494,9 @@ const INITIAL_APPOINTMENTS: Appointment[] = [
     check_in_time: null,
     cancellation_reason: 'Inconveniente laboral de última hora. Solicito reprogramar para la tarde.',
     whatsapp_notified: false,
+    payment_status: 'pendiente',
+    payment_amount_usd: 85,
+    payment_amount_bs: 3272.5,
     created_at: new Date().toISOString(),
   },
   {
@@ -462,6 +514,9 @@ const INITIAL_APPOINTMENTS: Appointment[] = [
     check_in_time: null,
     cancellation_reason: null,
     whatsapp_notified: true,
+    payment_status: 'pendiente',
+    payment_amount_usd: 60,
+    payment_amount_bs: 2310,
     created_at: new Date().toISOString(),
   },
   {
@@ -479,6 +534,52 @@ const INITIAL_APPOINTMENTS: Appointment[] = [
     check_in_time: '09:55 AM',
     cancellation_reason: null,
     whatsapp_notified: true,
+    payment_status: 'pagado',
+    payment_method: 'punto_venta',
+    payment_amount_usd: 40,
+    payment_amount_bs: 1540,
+    payment_reference: 'POS-7741',
+    payment_date: new Date(Date.now() - 86400000 * 5).toISOString(),
+    created_at: new Date().toISOString(),
+  },
+  {
+    id: 'apt-5',
+    patient_id: 'user-pat-val-1',
+    patient_name: 'Valentina Colmenares',
+    patient_cedula: 'V-24556778',
+    patient_phone: '+58 414 2334455',
+    doctor_id: 'doc-1', // Dr. Carlos Mendoza (Cardiólogo)
+    service_id: 5, // Cardiología & Ecocardiografía
+    area: 'salud',
+    appointment_date: new Date().toISOString().split('T')[0],
+    appointment_time: '10:30 AM',
+    status: 'pendiente', // Por validar por secretaría
+    check_in_time: null,
+    cancellation_reason: null,
+    whatsapp_notified: false,
+    payment_status: 'pendiente',
+    payment_amount_usd: 55,
+    payment_amount_bs: 49500,
+    created_at: new Date().toISOString(),
+  },
+  {
+    id: 'apt-6',
+    patient_id: 'user-pat-val-2',
+    patient_name: 'Andrés Eloy Rivas',
+    patient_cedula: 'V-19884521',
+    patient_phone: '+58 412 8765432',
+    doctor_id: null, // Sin especialista asignado (la clínica le asignará uno con la secretaria al confirmar)
+    service_id: 3, // Oftalmología & Evaluación Visual
+    area: 'salud',
+    appointment_date: new Date().toISOString().split('T')[0],
+    appointment_time: '01:45 PM',
+    status: 'pendiente', // Por validar por secretaría
+    check_in_time: null,
+    cancellation_reason: null,
+    whatsapp_notified: false,
+    payment_status: 'pendiente',
+    payment_amount_usd: 50,
+    payment_amount_bs: 45000,
     created_at: new Date().toISOString(),
   },
 ]
@@ -497,6 +598,26 @@ const INITIAL_RECORDS: MedicalRecord[] = [
     diagnosis: 'Hipertensión Arterial Estadio 1 controlada. Bradicardia sinusal fisiológica.',
     treatment: 'Losartán Potásico 50mg (1 comprimido diario en ayunas). Dieta baja en sodio y actividad física moderada 30 min/día.',
     recipe_file_url: 'https://cmzenit.com/recipes/recipe_juan_perez_cardio.pdf',
+    vital_signs: {
+      blood_pressure: '135/88 mmHg',
+      heart_rate: '72 lpm',
+      respiratory_rate: '16 rpm',
+      temperature: '36.6 °C',
+      oxygen_saturation: '98 %',
+      weight_kg: 81.5,
+      height_cm: 176,
+      bmi: 26.3,
+    },
+    allergies: ['Penicilina', 'AINEs (Ibuprofeno)'],
+    attachments: [
+      {
+        name: 'Electrocardiograma_Trazado_12D.png',
+        file_url: '/img/hero.png',
+        file_type: 'image/png',
+        size_kb: 340,
+        uploaded_at: '2026-10-18',
+      },
+    ],
     exams_json: [
       {
         name: 'Electrocardiograma en Reposo (12 derivaciones)',
@@ -526,6 +647,25 @@ const INITIAL_RECORDS: MedicalRecord[] = [
     diagnosis: 'Biotipo cutáneo mixto sensible con daño actínico incipiente.',
     treatment: 'Protocolo de Limpieza HydraFacial + Sérum Niacinamida al 10% y Fotoprotector SPF 50 toque seco cada 4 horas.',
     recipe_file_url: 'https://cmzenit.com/skincare/rutina_facial_juan_perez.pdf',
+    vital_signs: {
+      blood_pressure: '120/78 mmHg',
+      heart_rate: '70 lpm',
+      temperature: '36.4 °C',
+      oxygen_saturation: '99 %',
+      weight_kg: 62.0,
+      height_cm: 165,
+      bmi: 22.8,
+    },
+    allergies: ['Látex', 'Sulfas'],
+    attachments: [
+      {
+        name: 'Registro_Dermatoscopico_Facial.jpg',
+        file_url: '/img/hero.png',
+        file_type: 'image/jpeg',
+        size_kb: 512,
+        uploaded_at: '2026-10-05',
+      },
+    ],
     exams_json: [
       {
         name: 'Dermatoscopia Facial Digital',
@@ -589,6 +729,254 @@ export function CMZenitProvider({ children }: { children: ReactNode }) {
   const [appointments, setAppointments] = useState<Appointment[]>(INITIAL_APPOINTMENTS)
   const [medicalRecords, setMedicalRecords] = useState<MedicalRecord[]>(INITIAL_RECORDS)
   const [notifications, setNotifications] = useState<AppNotification[]>(INITIAL_NOTIFICATIONS)
+
+  // Módulo de Caja y Tasa Oficial del Día (USD / Bs.)
+  const [exchangeRate, setExchangeRateState] = useState<number>(38.50)
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const savedRate = localStorage.getItem('cmzenit_rate')
+      if (savedRate && !isNaN(Number(savedRate))) {
+        setExchangeRateState(Number(savedRate))
+      }
+    }
+  }, [])
+
+  const setExchangeRate = (rate: number) => {
+    setExchangeRateState(rate)
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('cmzenit_rate', String(rate))
+    }
+  }
+
+  // Módulo de Alergias Críticas por Paciente (indexado por Cédula)
+  const [patientAllergiesMap, setPatientAllergiesMap] = useState<Record<string, string[]>>({
+    'V-18456789': ['Penicilina', 'AINEs (Ibuprofeno)'],
+    'V-20112345': ['Látex', 'Sulfas'],
+    'V-14789654': ['Yodo / Contrastes'],
+  })
+
+  const updatePatientAllergies = (patientCedula: string, allergies: string[]) => {
+    const key = patientCedula.trim().toUpperCase()
+    setPatientAllergiesMap((prev) => ({
+      ...prev,
+      [key]: allergies,
+    }))
+  }
+
+  // Módulo de Ficha y Perfil Clínico del Paciente
+  const [patientProfiles, setPatientProfiles] = useState<Record<string, PatientClinicalProfile>>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const saved = localStorage.getItem('cmzenit_patient_profiles')
+        if (saved) return JSON.parse(saved)
+      } catch (e) {
+        console.error('Error loading patient profiles from localStorage', e)
+      }
+    }
+    return {
+      'V-18456789': {
+        cedula: 'V-18456789',
+        fullName: 'Juan Pérez (Paciente)',
+        email: 'paciente@cmzenit.com',
+        phone: '+58 412 1234567',
+        gender: 'Masculino',
+        birthDate: '1988-06-14',
+        address: 'Av. Los Chorros con Transversal 10, Residencias Sebucán Plaza, Torre B, Apto 5-A, Caracas',
+        emergencyContact: 'María Elena Pérez (Esposa)',
+        emergencyPhone: '+58 414 9988776',
+        weightKg: 78.5,
+        heightCm: 176,
+        bloodType: 'O+',
+        chronicDiseases: 'Hipertensión arterial primaria controlada. Rinitis alérgica estacional.',
+        allergies: 'Penicilina, AINEs (Ibuprofeno)',
+        surgicalHistory: 'Apendicectomía laparoscópica (2018).',
+        currentMedications: 'Losartán Potásico 50mg (1 tableta cada 24h).',
+        updatedAt: '2026-03-15T10:00:00.000Z',
+      },
+    }
+  })
+
+  const getPatientProfile = (cedula?: string): PatientClinicalProfile => {
+    const key = (cedula || currentUser?.cedula || 'V-18456789').trim().toUpperCase()
+    if (patientProfiles[key]) {
+      return patientProfiles[key]
+    }
+    return {
+      cedula: key,
+      fullName: currentUser?.name || 'Paciente',
+      email: currentUser?.email || '',
+      phone: currentUser?.phone || '',
+      gender: 'Masculino',
+      birthDate: '',
+      address: '',
+      emergencyContact: '',
+      emergencyPhone: '',
+      weightKg: undefined,
+      heightCm: undefined,
+      bloodType: 'O+',
+      chronicDiseases: '',
+      allergies: '',
+      surgicalHistory: '',
+      currentMedications: '',
+      updatedAt: undefined,
+    }
+  }
+
+  const savePatientProfile = async (profile: PatientClinicalProfile) => {
+    const key = profile.cedula.trim().toUpperCase()
+    const updated: PatientClinicalProfile = {
+      ...profile,
+      cedula: key,
+      updatedAt: new Date().toISOString(),
+    }
+    setPatientProfiles((prev) => {
+      const next = { ...prev, [key]: updated }
+      if (typeof window !== 'undefined') {
+        try {
+          localStorage.setItem('cmzenit_patient_profiles', JSON.stringify(next))
+        } catch (e) {
+          console.error('Error saving patient profiles to localStorage', e)
+        }
+      }
+      return next
+    })
+
+    // Sincronizar mapa de alergias críticas
+    if (updated.allergies) {
+      const list = updated.allergies.split(/[,;\n]/).map((s) => s.trim()).filter(Boolean)
+      if (list.length > 0) {
+        updatePatientAllergies(key, list)
+      }
+    }
+
+    // Sincronizar datos básicos con currentUser si corresponde
+    if (currentUser && (currentUser.cedula?.toUpperCase() === key || currentUser.id === 'user-base-paciente')) {
+      setCurrentUser((prev) =>
+        prev
+          ? {
+              ...prev,
+              name: updated.fullName || prev.name,
+              phone: updated.phone || prev.phone,
+              cedula: key,
+            }
+          : null
+      )
+    }
+  }
+
+  // Registrar Cobro / Pago de Cita en Caja (Recepción)
+  const updateAppointmentPayment = async (
+    appointmentId: string,
+    payment: {
+      status: PaymentStatus
+      method?: PaymentMethod
+      amount_usd?: number
+      amount_bs?: number
+      reference?: string
+    }
+  ) => {
+    const paymentDate = new Date().toISOString()
+    const amountUsd = payment.amount_usd || 0
+    const amountBs = payment.amount_bs || Math.round(amountUsd * exchangeRate * 100) / 100
+
+    setAppointments((prev) =>
+      prev.map((a) =>
+        a.id === appointmentId
+          ? {
+              ...a,
+              payment_status: payment.status,
+              payment_method: payment.method,
+              payment_amount_usd: amountUsd,
+              payment_amount_bs: amountBs,
+              payment_reference: payment.reference,
+              payment_date: paymentDate,
+            }
+          : a
+      )
+    )
+
+    if (isSupabaseConfigured()) {
+      try {
+        await db
+          .from('appointments')
+          .update({
+            payment_status: payment.status,
+            payment_method: payment.method,
+            payment_amount_usd: amountUsd,
+            payment_amount_bs: amountBs,
+            payment_reference: payment.reference,
+            payment_date: paymentDate,
+          })
+          .eq('id', appointmentId)
+      } catch (e) {
+        console.warn('Error sincronizando pago en Supabase:', e)
+      }
+    }
+
+    const apt = appointments.find((a) => a.id === appointmentId)
+    const newNotif: AppNotification = {
+      id: 'notif-pay-' + Date.now(),
+      title: 'Cobro de Cita Procesado',
+      message: `Se registró pago de ${amountUsd} (Bs. ${amountBs.toLocaleString('es-VE')}) para ${apt?.patient_name || 'Paciente'} (${payment.method?.toUpperCase() || 'CAJA'}).`,
+      time: 'Justo ahora',
+      type: 'alert',
+      read: false,
+      appointmentId,
+    }
+    setNotifications((prev) => [newNotif, ...prev])
+  }
+
+  // Subida de Archivos Médicos (Supabase Storage con Fallback Base64 Local)
+  const uploadMedicalAttachment = async (
+    file: File
+  ): Promise<{ url: string; name: string; size_kb: number; type: string }> => {
+    const size_kb = Math.round(file.size / 1024)
+
+    if (isSupabaseConfigured()) {
+      try {
+        const fileExt = file.name.split('.').pop()
+        const cleanName = file.name.replace(/[^a-zA-Z0-9_.-]/g, '_')
+        const filePath = `medical-docs/${Date.now()}_${cleanName}`
+
+        const { data, error } = await supabase.storage
+          .from('recipes')
+          .upload(filePath, file, { upsert: true })
+
+        if (!error && data) {
+          const { data: pubData } = supabase.storage
+            .from('recipes')
+            .getPublicUrl(filePath)
+
+          if (pubData?.publicUrl) {
+            return {
+              url: pubData.publicUrl,
+              name: file.name,
+              size_kb,
+              type: file.type || 'application/octet-stream',
+            }
+          }
+        }
+      } catch (err) {
+        console.warn('Error en upload Supabase Storage, usando base64 local:', err)
+      }
+    }
+
+    // Fallback Offline / Local: Data URL Base64 para visualización inmediata en navegador
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader()
+      reader.onload = () => {
+        resolve({
+          url: reader.result as string,
+          name: file.name,
+          size_kb,
+          type: file.type || 'application/octet-stream',
+        })
+      }
+      reader.onerror = (e) => reject(e)
+      reader.readAsDataURL(file)
+    })
+  }
 
   // Rol activo derivado estrictamente del usuario logueado (o paciente si no hay sesión)
   const activeRole: UserRole = currentUser ? currentUser.role : 'paciente'
@@ -960,17 +1348,20 @@ export function CMZenitProvider({ children }: { children: ReactNode }) {
   // Agendar nueva cita
   const bookAppointment = async (params: {
     serviceId: number
-    doctorId: string
+    doctorId?: string | null
     date: string
     time: string
     patientName?: string
     patientCedula?: string
     patientPhone?: string
     area: ClinicArea
+    status?: AppointmentStatus
   }) => {
     const patientName = params.patientName || currentUser?.name || 'Paciente Invitado'
     const patientCedula = params.patientCedula || currentUser?.cedula || 'V-S/C'
     const patientPhone = params.patientPhone || currentUser?.phone || '+58 412 0000000'
+    const initialStatus: AppointmentStatus = params.status || 'pendiente'
+    const finalDoctorId = params.doctorId && params.doctorId.trim() ? params.doctorId.trim() : null
 
     const newApt: Appointment = {
       id: 'apt-' + Date.now(),
@@ -978,12 +1369,12 @@ export function CMZenitProvider({ children }: { children: ReactNode }) {
       patient_name: patientName,
       patient_cedula: patientCedula,
       patient_phone: patientPhone,
-      doctor_id: params.doctorId,
+      doctor_id: finalDoctorId,
       service_id: params.serviceId,
       area: params.area,
       appointment_date: params.date,
       appointment_time: params.time,
-      status: 'confirmada',
+      status: initialStatus,
       check_in_time: null,
       cancellation_reason: null,
       whatsapp_notified: false,
@@ -998,12 +1389,12 @@ export function CMZenitProvider({ children }: { children: ReactNode }) {
           patient_name: patientName,
           patient_cedula: patientCedula,
           patient_phone: patientPhone,
-          doctor_id: params.doctorId,
+          doctor_id: finalDoctorId,
           service_id: params.serviceId,
           area: params.area,
           appointment_date: params.date,
           appointment_time: params.time,
-          status: 'confirmada',
+          status: initialStatus,
         })
       } catch (e) {
         console.warn('Error guardando en Supabase:', e)
@@ -1015,8 +1406,8 @@ export function CMZenitProvider({ children }: { children: ReactNode }) {
     // Agregar notificación para Secretaría
     const newNotif: AppNotification = {
       id: 'notif-' + Date.now(),
-      title: 'Nueva Cita Agendada',
-      message: `${patientName} agendó para el ${params.date} a las ${params.time}.`,
+      title: initialStatus === 'pendiente' ? 'Nueva Cita Pendiente de Validación' : 'Nueva Cita Agendada',
+      message: `${patientName} solicitó cita para el ${params.date} a las ${params.time}. Validación telefónica / WhatsApp requerida.`,
       time: 'Justo ahora',
       type: 'appointment',
       read: false,
@@ -1025,6 +1416,91 @@ export function CMZenitProvider({ children }: { children: ReactNode }) {
     setNotifications((prev) => [newNotif, ...prev])
 
     return { success: true, appointment: newApt }
+  }
+
+  // Secretaría valida con el paciente (llamada/WhatsApp) y confirma la cita
+  const validateAndConfirmAppointment = async (
+    appointmentId: string,
+    assignedDoctorId?: string | null
+  ) => {
+    let updatedApt: Appointment | undefined
+
+    setAppointments((prev) =>
+      prev.map((a) => {
+        if (a.id === appointmentId) {
+          const finalDocId =
+            assignedDoctorId !== undefined
+              ? (assignedDoctorId && assignedDoctorId.trim() ? assignedDoctorId.trim() : null)
+              : a.doctor_id
+          updatedApt = {
+            ...a,
+            status: 'confirmada',
+            doctor_id: finalDocId,
+            whatsapp_notified: true,
+          }
+          return updatedApt
+        }
+        return a
+      })
+    )
+
+    if (isSupabaseConfigured()) {
+      try {
+        const updateData: any = { status: 'confirmada', whatsapp_notified: true }
+        if (assignedDoctorId !== undefined) {
+          updateData.doctor_id =
+            assignedDoctorId && assignedDoctorId.trim() ? assignedDoctorId.trim() : null
+        }
+        await db.from('appointments').update(updateData).eq('id', appointmentId)
+      } catch (e) {
+        console.warn('Error confirmando cita en Supabase:', e)
+      }
+    }
+
+    // Notificación
+    const apt = appointments.find((a) => a.id === appointmentId)
+    const newNotif: AppNotification = {
+      id: 'notif-' + Date.now(),
+      title: 'Cita Validada & Confirmada',
+      message: `La secretaría validó la asistencia de ${apt?.patient_name || 'Paciente'} para el ${apt?.appointment_date || 'día programado'}.`,
+      time: 'Justo ahora',
+      type: 'appointment',
+      read: false,
+      appointmentId,
+    }
+    setNotifications((prev) => [newNotif, ...prev])
+
+    return { success: true, appointment: updatedApt }
+  }
+
+  // Secretaría descarta una cita no confirmada (número falso, prueba o paciente desistió)
+  const dismissUnconfirmedAppointment = async (
+    appointmentId: string,
+    reason?: string
+  ) => {
+    const finalReason =
+      reason || 'Descartada por Secretaría: Registro de prueba / Sin confirmación telefónica o WhatsApp'
+    setAppointments((prev) =>
+      prev.map((a) =>
+        a.id === appointmentId
+          ? { ...a, status: 'cancelada', cancellation_reason: finalReason }
+          : a
+      )
+    )
+
+    if (isSupabaseConfigured()) {
+      try {
+        await db
+          .from('appointments')
+          .update({
+            status: 'cancelada',
+            cancellation_reason: finalReason,
+          })
+          .eq('id', appointmentId)
+      } catch (e) {
+        console.warn('Error cancelando cita en Supabase:', e)
+      }
+    }
   }
 
   // Paciente solicita cancelación a secretaría
@@ -1312,6 +1788,8 @@ export function CMZenitProvider({ children }: { children: ReactNode }) {
         medicalRecords,
         notifications,
         bookAppointment,
+        validateAndConfirmAppointment,
+        dismissUnconfirmedAppointment,
         requestCancellation,
         confirmCheckIn,
         cancelAppointmentWithNotice,
@@ -1324,6 +1802,15 @@ export function CMZenitProvider({ children }: { children: ReactNode }) {
         markNotificationAsRead,
         clearNotifications,
         unreadNotificationsCount,
+        exchangeRate,
+        setExchangeRate,
+        updateAppointmentPayment,
+        patientAllergiesMap,
+        updatePatientAllergies,
+        patientProfiles,
+        getPatientProfile,
+        savePatientProfile,
+        uploadMedicalAttachment,
       }}
     >
       {children}

@@ -627,25 +627,20 @@ export function PatientLoginView() {
         </>
       )}
 
-      {/* ENLACES A LOS OTROS DOS PORTALES DE INGRESO */}
+      {/* INFORMACIÓN DE APOYO AL PACIENTE */}
       <div className="mt-6 pt-5 border-t border-gray-100 space-y-2 text-center text-xs text-[#777777]">
-        <p className="font-semibold text-[#525862]">¿Eres miembro de nuestro equipo clínico?</p>
-        <div className="flex flex-col sm:flex-row items-center justify-center gap-2 sm:gap-4 text-[11px]">
-          <Link
-            href="/login/personal"
-            className="flex items-center gap-1.5 text-[#02B2C6] hover:underline font-bold"
+        <p className="text-[11px] text-[#525862]">
+          ¿Tienes dudas o necesitas asistencia con tus citas médicas?
+        </p>
+        <div className="flex items-center justify-center gap-2 text-[11px]">
+          <a
+            href="https://wa.me/584220241622"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-[#02B2C6] hover:underline font-semibold flex items-center gap-1"
           >
-            <Stethoscope className="w-3.5 h-3.5" />
-            <span>Doctores & Secretaría →</span>
-          </Link>
-          <span className="hidden sm:inline text-gray-300">•</span>
-          <Link
-            href="/admin/login"
-            className="flex items-center gap-1.5 text-[#525862] hover:text-[#02B2C6] transition font-medium"
-          >
-            <Shield className="w-3.5 h-3.5" />
-            <span>Dirección / Admin</span>
-          </Link>
+            <span>Atención al Paciente vía WhatsApp: (422) 0241622</span>
+          </a>
         </div>
       </div>
     </div>

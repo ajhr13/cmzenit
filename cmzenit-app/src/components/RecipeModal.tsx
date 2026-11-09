@@ -137,6 +137,63 @@ export function RecipeModal({
               </div>
             </div>
 
+            {/* ALERTA CLÍNICA DE ALERGIAS */}
+            {record.allergies && record.allergies.length > 0 && (
+              <div className="p-3 rounded-2xl bg-rose-50 border border-rose-200 text-rose-900 text-xs flex items-center gap-2.5">
+                <span className="font-black text-[10px] uppercase tracking-wider text-white bg-rose-600 px-2 py-0.5 rounded-md shadow-sm">
+                  ⚠️ ALERGIAS CONFIRMADAS
+                </span>
+                <span className="font-bold text-rose-800">{record.allergies.join(' • ')}</span>
+              </div>
+            )}
+
+            {/* CONSTANTES Y SIGNOS VITALES */}
+            {record.vital_signs && (
+              <div className="p-3 bg-zinc-50/80 rounded-2xl border border-zinc-200 space-y-1.5">
+                <span className="text-[10px] font-extrabold uppercase tracking-wider text-zinc-400 block">
+                  Constantes Vitales en Consulta:
+                </span>
+                <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-2 text-xs">
+                  {record.vital_signs.blood_pressure && (
+                    <div className="bg-white p-2 rounded-xl border border-zinc-100 shadow-2xs">
+                      <span className="text-[9px] uppercase font-semibold text-zinc-400 block">Tensión Art.</span>
+                      <strong className="text-zinc-800 font-bold">{record.vital_signs.blood_pressure}</strong>
+                    </div>
+                  )}
+                  {record.vital_signs.heart_rate && (
+                    <div className="bg-white p-2 rounded-xl border border-zinc-100 shadow-2xs">
+                      <span className="text-[9px] uppercase font-semibold text-zinc-400 block">Pulso / FC</span>
+                      <strong className="text-zinc-800 font-bold">{record.vital_signs.heart_rate}</strong>
+                    </div>
+                  )}
+                  {record.vital_signs.temperature && (
+                    <div className="bg-white p-2 rounded-xl border border-zinc-100 shadow-2xs">
+                      <span className="text-[9px] uppercase font-semibold text-zinc-400 block">Temperatura</span>
+                      <strong className="text-zinc-800 font-bold">{record.vital_signs.temperature}</strong>
+                    </div>
+                  )}
+                  {record.vital_signs.oxygen_saturation && (
+                    <div className="bg-white p-2 rounded-xl border border-zinc-100 shadow-2xs">
+                      <span className="text-[9px] uppercase font-semibold text-zinc-400 block">SpO2 (Oxígeno)</span>
+                      <strong className="text-zinc-800 font-bold">{record.vital_signs.oxygen_saturation}</strong>
+                    </div>
+                  )}
+                  {record.vital_signs.weight_kg && (
+                    <div className="bg-white p-2 rounded-xl border border-zinc-100 shadow-2xs">
+                      <span className="text-[9px] uppercase font-semibold text-zinc-400 block">Peso</span>
+                      <strong className="text-zinc-800 font-bold">{record.vital_signs.weight_kg} kg</strong>
+                    </div>
+                  )}
+                  {record.vital_signs.bmi && (
+                    <div className="bg-white p-2 rounded-xl border border-zinc-100 shadow-2xs">
+                      <span className="text-[9px] uppercase font-semibold text-zinc-400 block">IMC</span>
+                      <strong className="text-[#02B2C6] font-extrabold">{record.vital_signs.bmi}</strong>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
             {/* DIAGNÓSTICO MÉDICO */}
             <div className="space-y-1">
               <span className="text-[11px] uppercase tracking-wider font-extrabold text-zinc-500 flex items-center gap-1">
@@ -174,6 +231,45 @@ export function RecipeModal({
                       <span className="text-[10px] text-zinc-500 font-medium">{ex.result || ex.type || 'Solicitado'}</span>
                     </div>
                   ))}
+                </div>
+              </div>
+            )}
+
+            {/* ESTUDIOS Y ARCHIVOS ADJUNTOS */}
+            {record.attachments && record.attachments.length > 0 && (
+              <div className="space-y-2 pt-1">
+                <span className="text-[11px] uppercase tracking-wider font-extrabold text-zinc-500 block">
+                  Estudios Médicos e Imágenes Adjuntas:
+                </span>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                  {record.attachments.map((att, idx) => {
+                    const isImage = !att.name.toLowerCase().endsWith('.pdf') && !att.file_type?.includes('pdf')
+
+                    return (
+                      <a
+                        key={idx}
+                        href={att.file_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="p-2 rounded-xl border border-cyan-200 bg-cyan-50/50 hover:bg-cyan-100/60 flex items-center gap-2.5 transition text-zinc-800"
+                      >
+                        {isImage ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img
+                            src={att.file_url}
+                            alt={att.name}
+                            className="w-10 h-10 rounded-lg object-cover border border-cyan-300 shrink-0"
+                          />
+                        ) : (
+                          <span className="text-[#02B2C6] font-bold text-base shrink-0">📎</span>
+                        )}
+                        <div className="flex-1 min-w-0">
+                          <span className="font-bold truncate text-[11px] block">{att.name}</span>
+                          <span className="text-[10px] text-zinc-500 font-medium">{att.size_kb} KB</span>
+                        </div>
+                      </a>
+                    )
+                  })}
                 </div>
               </div>
             )}

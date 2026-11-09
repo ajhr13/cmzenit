@@ -22,6 +22,8 @@ import {
   Minimize2,
   ChevronUp,
   ChevronDown,
+  Home,
+  RotateCcw,
 } from 'lucide-react'
 import { WhatsAppIcon } from '@/components/SocialIcons'
 
@@ -75,6 +77,27 @@ export function Chatbot() {
     },
   ])
 
+  // Reiniciar la conversación al Menú de Inicio limpio
+  const handleResetToHome = () => {
+    setMessages([
+      {
+        id: getMsgId('welcome-1'),
+        sender: 'bot',
+        text: '¡Hola! 👋 Te doy la bienvenida al Asistente Virtual de Grupo Médico Zenit. Estoy aquí para brindarte información en tiempo real las 24 horas del día.',
+        timestamp: 'Ahora',
+      },
+      {
+        id: getMsgId('welcome-2'),
+        sender: 'bot',
+        text: '¿En qué te puedo orientar hoy? Aquí tienes las opciones principales del Menú de Inicio o puedes escribirme directamente:',
+        timestamp: 'Ahora',
+        actionType: 'services',
+      },
+    ])
+    setIsQuickActionsVisible(true)
+    setInputValue('')
+  }
+
   // Scroll automático hacia el último mensaje
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -116,16 +139,32 @@ export function Chatbot() {
       query: 'horarios',
       icon: <Clock className="w-3.5 h-3.5 text-[#02B2C6]" />,
     },
-    {
-      label: 'Agendar una Cita',
-      query: 'agendar cita',
-      icon: <Calendar className="w-3.5 h-3.5 text-[#02B2C6]" />,
-    },
   ]
 
   // Motor conversacional heurístico e inteligente
   const processQuery = (rawText: string) => {
     const query = rawText.toLowerCase().trim()
+
+    // 0. MENÚ DE INICIO / VOLVER
+    if (
+      query === 'inicio' ||
+      query === 'menu' ||
+      query === 'menú' ||
+      query.includes('menu de inicio') ||
+      query.includes('menú de inicio') ||
+      query.includes('menu principal') ||
+      query.includes('menú principal') ||
+      query.includes('volver al inicio') ||
+      query.includes('reiniciar') ||
+      query === 'hola' ||
+      query === 'buenas' ||
+      query === 'empezar'
+    ) {
+      return {
+        text: '¡Estás en el Menú de Inicio de ZenitBot! 👋 Te puedo orientar en lo que necesites: consulta aranceles de precios, ubicación de nuestra sede en Galerías Sebucán, especialidades médicas, estética o agendar tu cita:',
+        actionType: 'services' as const,
+      }
+    }
 
     // 1. CONSULTA DE PRECIOS
     if (
@@ -401,6 +440,17 @@ export function Chatbot() {
 
             <div className="flex items-center gap-1 text-slate-300">
               <button
+                type="button"
+                onClick={handleResetToHome}
+                aria-label="Volver al Menú de Inicio"
+                className="flex items-center gap-1 p-1.5 px-2 rounded-lg bg-white/10 hover:bg-white/20 text-white transition cursor-pointer text-xs"
+                title="Volver al Menú de Inicio"
+              >
+                <Home className="w-3.5 h-3.5 text-[#02B2C6]" />
+                <span className="text-[10px] font-bold">Inicio</span>
+              </button>
+
+              <button
                 onClick={() => setIsMinimized(!isMinimized)}
                 aria-label={isMinimized ? 'Maximizar chat' : 'Minimizar chat'}
                 className="p-1.5 rounded-lg hover:bg-white/10 hover:text-white transition cursor-pointer"
@@ -554,28 +604,28 @@ export function Chatbot() {
                             <Link
                               href="/especialidades"
                               onClick={() => setIsOpen(false)}
-                              className="p-2.5 rounded-xl bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 hover:border-[#02B2C6] transition flex flex-col justify-between"
+                              className="p-2 rounded-xl bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 hover:border-[#02B2C6] transition flex flex-col justify-between"
                             >
-                              <div className="flex items-center gap-1.5 font-bold text-[#02B2C6] mb-1">
+                              <div className="flex items-center gap-1.5 font-bold text-[#02B2C6] mb-0.5">
                                 <Stethoscope className="w-3.5 h-3.5" />
                                 <span>Salud Médica</span>
                               </div>
-                              <p className="text-[9px] text-[#777777] line-clamp-2">
-                                Hospitalización 24/7, oftalmología, ginecología, cardiología y odontología.
+                              <p className="text-[9px] text-[#777777] line-clamp-1">
+                                Hospitalización 24/7, consultas...
                               </p>
                             </Link>
 
                             <Link
                               href="/estetica"
                               onClick={() => setIsOpen(false)}
-                              className="p-2.5 rounded-xl bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 hover:border-[#02B2C6] transition flex flex-col justify-between"
+                              className="p-2 rounded-xl bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 hover:border-[#02B2C6] transition flex flex-col justify-between"
                             >
-                              <div className="flex items-center gap-1.5 font-bold text-[#02B2C6] mb-1">
+                              <div className="flex items-center gap-1.5 font-bold text-[#02B2C6] mb-0.5">
                                 <Sparkles className="w-3.5 h-3.5" />
                                 <span>Espacio Estética</span>
                               </div>
-                              <p className="text-[9px] text-[#777777] line-clamp-2">
-                                Masajes postoperatorios, hidrafacial, depilación láser diodo.
+                              <p className="text-[9px] text-[#777777] line-clamp-1">
+                                Masajes, aparatología facial...
                               </p>
                             </Link>
                           </div>
@@ -679,29 +729,54 @@ export function Chatbot() {
                       <ChevronUp className="w-3 h-3 text-slate-400" />
                     )}
                   </button>
+
+                  <button
+                    type="button"
+                    onClick={handleResetToHome}
+                    className="flex items-center gap-1 px-2.5 py-1 rounded-xl text-[10px] font-bold text-[#02B2C6] hover:bg-[#02B2C6] hover:text-white bg-cyan-50 dark:bg-cyan-950/60 border border-cyan-200 dark:border-cyan-800 transition cursor-pointer active:scale-95 shadow-xs"
+                    title="Volver al Menú de Inicio"
+                  >
+                    <Home className="w-3 h-3" />
+                    <span>Menú de Inicio</span>
+                  </button>
                 </div>
 
                 {/* Lista de Botones siempre en Columnas */}
                 {isQuickActionsVisible && (
-                  <div className="p-2">
+                  <div className="p-2 space-y-1.5">
                     <div className="grid grid-cols-2 gap-1.5 animate-in fade-in duration-200">
                       {quickActions.map((action, idx) => (
                         <button
                           key={idx}
                           type="button"
                           onClick={() => handleSendMessage(action.query)}
-                          className={`flex items-center gap-2 px-2.5 py-1.5 rounded-xl border text-[11px] font-semibold transition cursor-pointer active:scale-95 shadow-xs text-left ${
-                            idx === 4
-                              ? 'col-span-2 bg-[#02B2C6] hover:bg-[#029baa] text-white border-[#02B2C6] justify-center shadow-cyan-600/20'
-                              : 'bg-white dark:bg-zinc-800 hover:bg-cyan-50 dark:hover:bg-cyan-950/40 hover:border-[#02B2C6] border-slate-200 dark:border-zinc-700 text-[#525862] dark:text-zinc-200'
-                          }`}
+                          className="flex items-center gap-2 px-2.5 py-1.5 rounded-xl border text-[11px] font-semibold transition cursor-pointer active:scale-95 shadow-xs text-left bg-white dark:bg-zinc-800 hover:bg-cyan-50 dark:hover:bg-cyan-950/40 hover:border-[#02B2C6] border-slate-200 dark:border-zinc-700 text-[#525862] dark:text-zinc-200"
                         >
-                          <span className="shrink-0">
-                            {idx === 4 ? <Calendar className="w-3.5 h-3.5 text-white" /> : action.icon}
-                          </span>
+                          <span className="shrink-0">{action.icon}</span>
                           <span className="truncate">{action.label}</span>
                         </button>
                       ))}
+                    </div>
+
+                    {/* Fila Inferior: Menú de Inicio y Agendar una Cita */}
+                    <div className="grid grid-cols-2 gap-1.5 pt-0.5">
+                      <button
+                        type="button"
+                        onClick={handleResetToHome}
+                        className="flex items-center justify-center gap-1.5 px-2.5 py-2 rounded-xl border border-cyan-300 dark:border-cyan-800 bg-white dark:bg-zinc-800 hover:bg-cyan-50 dark:hover:bg-cyan-950/60 text-[#02B2C6] text-[11px] font-bold transition cursor-pointer active:scale-95 shadow-xs"
+                      >
+                        <Home className="w-3.5 h-3.5 text-[#02B2C6]" />
+                        <span>Menú de Inicio</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => handleSendMessage('agendar cita')}
+                        className="flex items-center justify-center gap-1.5 px-2.5 py-2 rounded-xl text-[11px] font-bold transition cursor-pointer active:scale-95 shadow-xs bg-[#02B2C6] hover:bg-[#029baa] text-white shadow-cyan-600/20"
+                      >
+                        <Calendar className="w-3.5 h-3.5 text-white" />
+                        <span>Agendar una Cita</span>
+                      </button>
                     </div>
                   </div>
                 )}

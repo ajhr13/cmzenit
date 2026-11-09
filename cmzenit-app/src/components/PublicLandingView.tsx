@@ -3,12 +3,12 @@
 import React, { useState, useEffect, useMemo } from 'react'
 import Link from 'next/link'
 import { useCMZenit } from '@/context/CMZenitContext'
+import { getDoctorsForService } from '@/lib/specialtyMatching'
 import {
   Clock,
   Calendar,
   Lock,
   ArrowRight,
-  ShieldCheck,
   Phone,
     ChevronLeft,
   ChevronRight,
@@ -17,11 +17,9 @@ import {
   Award,
   HeartPulse,
   Smile,
-  MapPin,
   ChevronDown,
 } from 'lucide-react'
 
-import { WhatsAppIcon, InstagramIcon } from '@/components/SocialIcons'
 
 // 6 Diapositivas para el Hero Slider fiel al sistema de diseño MedicalGuide
 const HERO_SLIDES = [
@@ -144,9 +142,28 @@ export function PublicLandingView() {
 
   // Booking Form State
   const [selectedServiceId, setSelectedServiceId] = useState<number>(services[0]?.id || 1)
-  const [selectedDoctorId, setSelectedDoctorId] = useState<string>(doctors[0]?.id || '')
+  const [selectedDoctorId, setSelectedDoctorId] = useState<string>('')
   const [appointmentDate, setAppointmentDate] = useState<string>('')
   const [todayDateStr, setTodayDateStr] = useState<string>('')
+
+  const currentService = useMemo(() => {
+    return services.find((s) => s.id === Number(selectedServiceId)) || services[0]
+  }, [services, selectedServiceId])
+
+  const matchingDoctors = useMemo(() => {
+    return getDoctorsForService(currentService, doctors)
+  }, [currentService, doctors])
+
+  // Sincronizar doctor cuando cambie el servicio o la lista de doctores coincidentes
+  useEffect(() => {
+    if (matchingDoctors.length > 0) {
+      if (!matchingDoctors.some((d) => d.id === selectedDoctorId)) {
+        setSelectedDoctorId(matchingDoctors[0].id)
+      }
+    } else {
+      setSelectedDoctorId('')
+    }
+  }, [matchingDoctors, selectedDoctorId])
 
   useEffect(() => {
     setTodayDateStr(new Date().toISOString().split('T')[0])
@@ -258,7 +275,7 @@ export function PublicLandingView() {
       appointmentDate || new Date(Date.now() + 86400000).toISOString().split('T')[0]
 
     const res = await bookAppointment({
-      doctorId: selectedDoctorId || doctors[0]?.id || 'doc-1',
+      doctorId: selectedDoctorId || '',
       serviceId: selectedSrv.id,
       date: chosenDate,
       time: appointmentTime,
@@ -266,13 +283,14 @@ export function PublicLandingView() {
       patientCedula: patientCedula || currentUser.cedula || 'V-00000000',
       patientPhone: patientPhone || currentUser.phone || '+58 422 0241622',
       area: selectedSrv.category,
+      status: 'pendiente',
     })
 
     setIsBookingSubmitting(false)
 
     if (res.success) {
       setBookingSuccessMsg(
-        `¡Cita solicitada exitosamente para ${selectedSrv.name} el ${chosenDate} a las ${appointmentTime}! Nuestro equipo te contactará para confirmar.`
+        `¡Cita pre-agendada exitosamente para ${selectedSrv.name} el ${chosenDate} a las ${appointmentTime}! Nuestra secretaría validará tus datos y confirmará la cita vía WhatsApp o llamada telefónica.`
       )
     }
   }
@@ -614,10 +632,8 @@ export function PublicLandingView() {
       {/* =========================================================================
           4. SECCIÓN AGENDAR CITA (FORMULARIO)
           ========================================================================= */}
-      <section id="agendar-cita" className="max-w-7xl mx-auto px-4 sm:px-6 pt-6 scroll-mt-28 lg:scroll-mt-32">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-          {/* Formulario */}
-          <div className="lg:col-span-5 bg-white rounded-md border border-gray-100 shadow-xl overflow-hidden">
+      <section id="agendar-cita" className="max-w-3xl mx-auto px-4 sm:px-6 pt-6 pb-12 scroll-mt-28 lg:scroll-mt-32">
+        <div className="bg-white rounded-md border border-gray-100 shadow-xl overflow-hidden">
             {/* Header Cian con Ícono de Calendario */}
             <div className="bg-[#02B2C6] text-white p-6 sm:p-7">
               <div className="flex items-center gap-3">
@@ -696,20 +712,47 @@ export function PublicLandingView() {
 
               {/* Selector de Especialista */}
               <div className="space-y-1">
-                <label className="text-[11px] font-semibold uppercase tracking-wider text-[#525862]">
-                  Médico o Especialista MPPS
-                </label>
+                <div className="flex items-center justify-between">
+                  <label className="text-[11px] font-semibold uppercase tracking-wider text-[#525862]">
+                    Médico o Especialista MPPS
+                  </label>
+                  {matchingDoctors.length > 0 ? (
+                    <span className="text-[10px] text-emerald-600 font-bold flex items-center gap-1">
+                      ✓ Coincide con {currentService?.name ? 'el servicio' : 'la especialidad'} ({matchingDoctors.length})
+                    </span>
+                  ) : (
+                    <span className="text-[10px] text-amber-600 font-bold flex items-center gap-1">
+                      ℹ️ Asignación por Secretaría
+                    </span>
+                  )}
+                </div>
                 <select
                   value={selectedDoctorId}
                   onChange={(e) => setSelectedDoctorId(e.target.value)}
                   className="w-full px-3.5 py-2.5 rounded-md border border-gray-200 bg-white text-xs text-[#525862] focus:outline-none focus:ring-2 focus:ring-[#02B2C6]"
                 >
-                  {doctors.map((doc) => (
-                    <option key={doc.id} value={doc.id}>
-                      {doc.name} — {doc.specialty_name}
+                  {matchingDoctors.length > 0 ? (
+                    <>
+                      {matchingDoctors.map((doc) => (
+                        <option key={doc.id} value={doc.id}>
+                          {doc.name} — {doc.specialty_name}
+                        </option>
+                      ))}
+                      <option value="">
+                        -- Dejar en blanco (La clínica asignará un especialista al confirmar) --
+                      </option>
+                    </>
+                  ) : (
+                    <option value="">
+                      -- Sin especialista asignado (La clínica le asignará uno al confirmar) --
                     </option>
-                  ))}
+                  )}
                 </select>
+                {matchingDoctors.length === 0 && (
+                  <p className="text-[10.5px] text-amber-800 bg-amber-50/80 p-2 rounded border border-amber-200/80 leading-relaxed">
+                    ℹ️ Este servicio no cuenta con un especialista predeterminado en agenda. Al confirmar tu cita vía WhatsApp o llamada telefónica, la secretaría te asignará un profesional colegiado.
+                  </p>
+                )}
               </div>
 
               {/* Fecha y Hora */}
@@ -813,125 +856,6 @@ export function PublicLandingView() {
                 )}
               </div>
             </form>
-          </div>
-
-          {/* Columna Derecha: Información de Confianza */}
-          <div className="lg:col-span-7 space-y-6">
-            <div className="space-y-3">
-              <span className="text-[11px] font-semibold uppercase tracking-widest text-[#02B2C6] block">
-                Atención Médica Humanizada
-              </span>
-              <h2 className="text-3xl sm:text-4xl font-semibold uppercase text-[#525862] tracking-tight">
-                Bienvenido a <span className="text-[#02B2C6]">CMZenit</span>
-              </h2>
-              <p className="text-xs sm:text-sm font-normal text-[#777777] leading-[1.6]">
-                Somos una institución médica y dermoestética integral comprometida con el cuidado de tu
-                salud. Contamos con tecnología diagnóstica de última generación, récipes médicos digitales
-                y quirófanos ambulatorios certificados en Caracas.
-              </p>
-            </div>
-
-            {/* Tarjetas Informativas */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="bg-white p-5 rounded-md border border-gray-100 shadow-sm space-y-2">
-                <div className="w-10 h-10 rounded-md bg-[#02B2C6] text-white flex items-center justify-center font-bold">
-                  <ShieldCheck className="w-5 h-5" />
-                </div>
-                <h3 className="text-sm font-semibold text-[#525862]">Acreditación Sanitaria MPPS</h3>
-                <p className="text-xs font-normal text-[#777777] leading-[1.6]">
-                  Acreditación sanitaria oficial N° 45.892 con especialistas colegiados.
-                </p>
-              </div>
-
-              <div className="bg-white p-5 rounded-md border border-gray-100 shadow-sm space-y-2">
-                <div className="w-10 h-10 rounded-md bg-[#02B2C6] text-white flex items-center justify-center font-bold">
-                  <Clock className="w-5 h-5" />
-                </div>
-                <h3 className="text-sm font-semibold text-[#525862]">Hospitalización 24/7</h3>
-                <p className="text-xs font-normal text-[#777777] leading-[1.6]">
-                  Habitaciones clínicas individuales monitoreadas las 24 horas del día.
-                </p>
-              </div>
-            </div>
-
-            {/* Banner de Contacto Gris Pizarra #525862 */}
-            <div className="bg-[#525862] text-white p-6 rounded-md flex flex-col sm:flex-row items-center justify-between gap-4 shadow-md">
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 rounded-md bg-[#02B2C6] text-white flex items-center justify-center shrink-0">
-                  <Phone className="w-6 h-6" />
-                </div>
-                <div>
-                  <p className="text-[10px] uppercase tracking-widest text-[#02B2C6] font-semibold flex items-center gap-2">
-                    <span>Central Telefónica & WhatsApp</span>
-                    <span className="text-white/60">•</span>
-                    <span className="flex items-center gap-1 text-white">
-                      <InstagramIcon className="w-3 h-3" /> @cmzenit
-                    </span>
-                  </p>
-                  <a
-                    href="tel:04220241622"
-                    className="text-lg sm:text-xl font-bold tracking-tight text-white hover:text-[#02B2C6] transition"
-                  >
-                    (422) 0241622
-                  </a>
-                  <p className="text-[11px] text-white/80">Lunes a Sábado de 8:00 AM a 7:00 PM</p>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-2">
-                <a
-                  href="https://wa.me/584220241622"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="px-4 py-2.5 rounded-md font-semibold text-xs uppercase tracking-wider bg-[#02B2C6] hover:bg-[#029baa] text-white shadow-sm transition flex items-center gap-2 whitespace-nowrap"
-                >
-                  <WhatsAppIcon className="w-4 h-4 text-white" />
-                  <span>WhatsApp Citas</span>
-                </a>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* =========================================================================
-          5. UBICACIÓN & CONTACTO INFORMATIVO
-          ========================================================================= */}
-      <section id="contacto-info" className="max-w-7xl mx-auto px-4 sm:px-6">
-        <div className="bg-white border border-gray-100 rounded-md p-6 sm:p-10 shadow-sm">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <div className="space-y-2">
-              <div className="w-10 h-10 rounded-md bg-[#02B2C6] text-white flex items-center justify-center font-bold">
-                <MapPin className="w-5 h-5" />
-              </div>
-              <h3 className="text-sm font-semibold text-[#525862]">Sede Principal</h3>
-              <p className="text-xs font-normal text-[#777777] leading-[1.6]">
-                Av. Transversal 10, CC, Galerias Sebucan, con Av. los Chorros, Caracas 1071, Miranda, Venezuela.
-              </p>
-            </div>
-
-            <div className="space-y-2">
-              <div className="w-10 h-10 rounded-md bg-[#02B2C6] text-white flex items-center justify-center font-bold">
-                <Phone className="w-5 h-5" />
-              </div>
-              <h3 className="text-sm font-semibold text-[#525862]">Teléfonos de Contacto</h3>
-              <p className="text-xs font-normal text-[#777777] leading-[1.6]">
-                Central: (422) 0241622 <br />
-                WhatsApp: (422) 0241622
-              </p>
-            </div>
-
-            <div className="space-y-2">
-              <div className="w-10 h-10 rounded-md bg-[#02B2C6] text-white flex items-center justify-center font-bold">
-                <Clock className="w-5 h-5" />
-              </div>
-              <h3 className="text-sm font-semibold text-[#525862]">Horario de Atención</h3>
-              <p className="text-xs font-normal text-[#777777] leading-[1.6]">
-                Consultas: Lunes a Sábado de 8:00 AM a 7:00 PM <br />
-                Hospitalización & Emergencias: 24 Horas
-              </p>
-            </div>
-          </div>
         </div>
       </section>
     </div>
