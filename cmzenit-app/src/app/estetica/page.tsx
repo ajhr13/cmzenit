@@ -228,11 +228,11 @@ export default function EsteticaPage() {
         <div className="absolute inset-0 bg-gradient-to-r from-slate-950/90 via-slate-900/60 to-slate-900/40" />
 
         {/* Contenedor Centrado para la Tarjeta Flotante */}
-        <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 py-12 sm:py-16 w-full flex justify-start">
+        <div className="relative z-10 max-w-7xl mx-auto px-3 sm:px-6 py-6 sm:py-16 w-full flex justify-start">
           {/* Tarjeta Flotante en Blanco Semitransparente con Borde Acento Cyan #02B2C6 */}
           <div
-            className="w-full max-w-xl sm:max-w-2xl p-7 sm:p-10 rounded-md shadow-2xl border-b-4 border-[#02B2C6] space-y-4 animate-in fade-in slide-in-from-left-6 duration-700"
-            style={{ backgroundColor: 'rgba(255, 255, 255, 0.92)' }}
+            className="w-full max-w-xl sm:max-w-2xl p-4 sm:p-7 md:p-10 rounded-xl shadow-2xl border-b-4 border-[#02B2C6] space-y-3 sm:space-y-4 animate-in fade-in slide-in-from-left-6 duration-700 overflow-hidden"
+            style={{ backgroundColor: 'rgba(255, 255, 255, 0.94)' }}
           >
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-cyan-50 dark:bg-cyan-950/60 text-[#02B2C6] text-xs font-black uppercase tracking-wider">
               <Sparkles className="w-4 h-4" />
@@ -240,32 +240,32 @@ export default function EsteticaPage() {
             </div>
 
             <div className="space-y-1">
-              <h2 className="text-2xl sm:text-3xl font-extrabold uppercase tracking-tight text-[#02B2C6]">
+              <h2 className="text-xl sm:text-3xl font-extrabold uppercase tracking-tight text-[#02B2C6] leading-tight break-words hyphens-auto">
                 {activeSlide.h1}
               </h2>
-              <p className="text-xs sm:text-sm font-semibold uppercase tracking-wider text-[#777777]">
+              <p className="text-[11px] sm:text-xs md:text-sm font-semibold uppercase tracking-wider text-[#777777] break-words">
                 {activeSlide.h2}
               </p>
             </div>
 
-            <p className="text-xs sm:text-sm text-[#525862] leading-relaxed font-normal">
+            <p className="text-xs sm:text-sm text-[#525862] leading-relaxed font-normal line-clamp-4 sm:line-clamp-none">
               {activeSlide.description}
             </p>
 
-            <ul className="space-y-2 pt-1 border-t border-slate-100">
+            <ul className="space-y-1.5 sm:space-y-2 pt-1 border-t border-slate-100">
               {activeSlide.features.map((feat, idx) => (
                 <li key={idx} className="flex items-center gap-2 text-xs text-[#525862]">
                   <CheckCircle2 className="w-3.5 h-3.5 text-[#02B2C6] shrink-0" />
-                  <span>{feat}</span>
+                  <span className="truncate sm:whitespace-normal">{feat}</span>
                 </li>
               ))}
             </ul>
 
             {/* Botones de Acción */}
-            <div className="pt-3 flex flex-wrap items-center gap-3">
+            <div className="pt-2 sm:pt-3 grid grid-cols-1 sm:flex sm:flex-wrap items-center gap-2.5 sm:gap-3">
               <button
                 onClick={handleBooking}
-                className="px-5 py-2.5 rounded-lg text-xs font-bold uppercase tracking-wider text-white bg-[#02B2C6] hover:bg-[#029baa] shadow-md transition flex items-center gap-2 cursor-pointer active:scale-95"
+                className="w-full sm:w-auto px-5 py-2.5 rounded-lg text-xs font-bold uppercase tracking-wider text-white bg-[#02B2C6] hover:bg-[#029baa] shadow-md transition flex items-center justify-center gap-2 cursor-pointer active:scale-95"
               >
                 <Calendar className="w-4 h-4" />
                 <span>Agendar Sesión</span>
@@ -275,7 +275,7 @@ export default function EsteticaPage() {
                 href="https://wa.me/584220241622"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="px-4 py-2.5 rounded-lg text-xs font-bold uppercase tracking-wider text-[#525862] bg-slate-100 hover:bg-slate-200 transition flex items-center gap-2"
+                className="w-full sm:w-auto px-4 py-2.5 rounded-lg text-xs font-bold uppercase tracking-wider text-[#525862] bg-slate-100 hover:bg-slate-200 transition flex items-center justify-center gap-2"
               >
                 <WhatsAppIcon className="w-4 h-4 text-emerald-500" />
                 <span>Consultar por WhatsApp</span>
@@ -283,7 +283,7 @@ export default function EsteticaPage() {
 
               <button
                 onClick={() => setSelectedFilter(activeSlide.filterTag)}
-                className="text-xs font-bold text-[#02B2C6] hover:underline ml-auto cursor-pointer"
+                className="text-xs font-bold text-[#02B2C6] hover:underline sm:ml-auto text-center sm:text-left cursor-pointer py-1"
               >
                 Ver en catálogo ↓
               </button>
@@ -291,11 +291,11 @@ export default function EsteticaPage() {
           </div>
         </div>
 
-        {/* Flechas de Navegación del Carrusel a Ancho Completo */}
+        {/* Flechas de Navegación del Carrusel a Ancho Completo (Ocultas en móvil) */}
         <button
           onClick={prevSlide}
           aria-label="Tratamiento anterior"
-          className="absolute left-4 sm:left-6 top-1/2 -translate-y-1/2 w-11 h-11 rounded-md bg-white/30 hover:bg-[#02B2C6] text-white flex items-center justify-center backdrop-blur-sm transition z-20 shadow-lg cursor-pointer active:scale-95"
+          className="absolute left-4 sm:left-6 top-1/2 -translate-y-1/2 w-11 h-11 rounded-md bg-white/30 hover:bg-[#02B2C6] text-white hidden md:flex items-center justify-center backdrop-blur-sm transition z-20 shadow-lg cursor-pointer active:scale-95"
         >
           <ChevronLeft className="w-6 h-6" />
         </button>
@@ -303,13 +303,13 @@ export default function EsteticaPage() {
         <button
           onClick={nextSlide}
           aria-label="Siguiente tratamiento"
-          className="absolute right-4 sm:right-6 top-1/2 -translate-y-1/2 w-11 h-11 rounded-md bg-white/30 hover:bg-[#02B2C6] text-white flex items-center justify-center backdrop-blur-sm transition z-20 shadow-lg cursor-pointer active:scale-95"
+          className="absolute right-4 sm:right-6 top-1/2 -translate-y-1/2 w-11 h-11 rounded-md bg-white/30 hover:bg-[#02B2C6] text-white hidden md:flex items-center justify-center backdrop-blur-sm transition z-20 shadow-lg cursor-pointer active:scale-95"
         >
           <ChevronRight className="w-6 h-6" />
         </button>
 
-        {/* Dots Indicadores */}
-        <div className="absolute bottom-6 right-8 z-20 hidden sm:flex items-center gap-2 bg-black/40 backdrop-blur-md px-3 py-1.5 rounded-full">
+        {/* Dots Indicadores - Visibles y centrados en móvil */}
+        <div className="absolute bottom-3 left-1/2 -translate-x-1/2 sm:left-auto sm:translate-x-0 sm:bottom-6 sm:right-8 z-20 flex items-center gap-2 bg-black/50 backdrop-blur-md px-3 py-1.5 rounded-full">
           {AESTHETIC_SLIDES.map((slide, idx) => (
             <button
               key={slide.id}

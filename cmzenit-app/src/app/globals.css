@@ -35,15 +35,15 @@
   --font-weight-semibold: 600;
   --font-weight-bold: 700;
 
-  /* Escala de Proporciones y Tamaños */
-  --font-size-hero: clamp(2.75rem, 5vw, 3.25rem); /* H1 (2.75rem a 3.25rem) */
-  --font-size-h2: clamp(1.85rem, 3.5vw, 2.25rem);  /* H2 (1.85rem a 2.25rem) */
-  --font-size-h3: 1.35rem;                         /* H3 */
-  --font-size-h4: 1.15rem;                         /* H4 */
-  --font-size-body: 1rem;                          /* Body (16px) */
-  --font-size-nav-btn: 0.95rem;                    /* Menú & Botones (15px) */
-  --font-size-eyebrow: 0.875rem;                   /* Eyebrow (14px) */
-  --font-size-aux: 0.85rem;                        /* Top Bar & Auxiliar (13.5px) */
+  /* Escala de Proporciones y Tamaños Adaptativos */
+  --font-size-hero: clamp(1.5rem, 4.5vw, 3rem); /* H1 (1.5rem en móvil a 3rem en desktop) */
+  --font-size-h2: clamp(1.15rem, 3vw, 2rem);    /* H2 (1.15rem en móvil a 2rem en desktop) */
+  --font-size-h3: 1.25rem;                        /* H3 */
+  --font-size-h4: 1.1rem;                         /* H4 */
+  --font-size-body: 0.95rem;                       /* Body (15.2px) */
+  --font-size-nav-btn: 0.9rem;                    /* Menú & Botones (14.5px) */
+  --font-size-eyebrow: 0.8rem;                    /* Eyebrow (12.8px) */
+  --font-size-aux: 0.75rem;                       /* Top Bar & Auxiliar (12px) */
 
   /* Interlineados (Line-height) */
   --line-height-tight: 1;

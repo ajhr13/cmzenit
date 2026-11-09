@@ -308,7 +308,7 @@ export function PublicLandingView() {
           Borde inferior de énfasis: #02B2C6
           ========================================================================= */}
       <section
-        className="relative w-full min-h-[580px] sm:min-h-[640px] lg:min-h-[680px] flex items-center overflow-hidden bg-[#525862] select-none"
+        className="relative w-full min-h-[500px] sm:min-h-[580px] lg:min-h-[640px] flex items-center overflow-hidden bg-[#525862] select-none"
         onMouseEnter={() => setIsPaused(true)}
         onMouseLeave={() => setIsPaused(false)}
       >
@@ -321,101 +321,101 @@ export function PublicLandingView() {
         />
 
         {/* Gradiente sutil para garantizar contraste */}
-        <div className="absolute inset-0 bg-gradient-to-r from-slate-900/40 via-transparent to-slate-900/50" />
+        <div className="absolute inset-0 bg-gradient-to-r from-slate-900/60 via-slate-900/30 to-slate-900/60 sm:from-slate-900/40 sm:via-transparent sm:to-slate-900/50" />
 
         {/* Badge Circular Cian Superior Derecho (Atención Médica 24/7) */}
-        <div className="absolute top-6 right-6 z-20 hidden md:flex items-center gap-2 bg-[#02B2C6] text-white px-3.5 py-1.5 rounded-md shadow-md text-xs font-semibold uppercase tracking-wider">
+        <div className="absolute top-4 right-4 sm:top-6 sm:right-6 z-20 hidden md:flex items-center gap-2 bg-[#02B2C6] text-white px-3.5 py-1.5 rounded-md shadow-md text-xs font-semibold uppercase tracking-wider">
           <Clock className="w-3.5 h-3.5" />
           <span>Atención 24/7</span>
         </div>
 
         {/* Contenedor Principal */}
-        <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 py-12 sm:py-20 w-full flex justify-end">
-          {/* TARJETA FLOTANTE A LA DERECHA EN BLANCO SEMITRANSPARENTE (rgba(255, 255, 255, 0.9)) */}
+        <div className="relative z-10 max-w-7xl mx-auto px-3 sm:px-6 py-6 sm:py-16 w-full flex justify-end">
+          {/* TARJETA FLOTANTE A LA DERECHA EN BLANCO SEMITRANSPARENTE (rgba(255, 255, 255, 0.95)) */}
           <div
-            className="w-full max-w-xl sm:max-w-2xl p-8 sm:p-10 rounded-md shadow-2xl border-b-4 border-[#02B2C6] space-y-4 animate-in fade-in slide-in-from-right-6 duration-700"
-            style={{ backgroundColor: 'rgba(255, 255, 255, 0.92)' }}
+            className="w-full max-w-xl sm:max-w-2xl p-4 sm:p-7 md:p-9 rounded-xl shadow-2xl border-b-4 border-[#02B2C6] space-y-3 sm:space-y-4 animate-in fade-in slide-in-from-right-4 duration-700 overflow-hidden"
+            style={{ backgroundColor: 'rgba(255, 255, 255, 0.95)' }}
           >
-            {/* TÍTULO HERO (H1): UPPERCASE, ExtraBold (800), color Azul Cian (#02B2C6) */}
-            <h1 className="text-2xl sm:text-4xl font-extrabold uppercase tracking-tight text-[#02B2C6] leading-tight">
+            {/* TÍTULO HERO (H1): UPPERCASE, ExtraBold, color Azul Cian (#02B2C6) adaptado a móviles sin desbordar */}
+            <h1 className="text-xl sm:text-3xl md:text-4xl font-extrabold uppercase tracking-tight text-[#02B2C6] leading-tight break-words hyphens-auto">
               {slide.h1}
             </h1>
 
             {/* SUBTÍTULO HERO (H2): UPPERCASE, Regular (400), color Gris Medio (#777777), ubicado justo debajo del H1 */}
-            <h2 className="text-xs sm:text-sm font-normal uppercase tracking-wider text-[#777777]">
+            <h2 className="text-[11px] sm:text-xs md:text-sm font-semibold uppercase tracking-wider text-[#777777] break-words">
               {slide.h2}
             </h2>
 
-            {/* CUERPO DE TEXTO: Regular (400), color Gris Medio (#777777), con interlineado amplio (line-height: 1.6) */}
-            <p className="text-xs sm:text-sm font-normal text-[#777777] leading-[1.6]">
+            {/* CUERPO DE TEXTO: Regular (400), color Gris Medio (#777777), con interlineado óptimo */}
+            <p className="text-xs sm:text-sm font-normal text-[#777777] leading-relaxed line-clamp-4 sm:line-clamp-none">
               {slide.description}
             </p>
 
             {/* Viñetas con Detalle Cian */}
-            <div className="space-y-2 pt-2 border-t border-gray-200/80">
+            <div className="space-y-1.5 sm:space-y-2 pt-2 border-t border-gray-200/80">
               {slide.bullets.map((bullet, idx) => (
-                <div key={idx} className="flex items-center gap-2.5 text-xs text-[#777777] font-normal leading-[1.6]">
-                  <div className="w-4 h-4 rounded-sm bg-[#02B2C6] text-white flex items-center justify-center font-bold text-[10px] shrink-0">
+                <div key={idx} className="flex items-center gap-2 text-[11px] sm:text-xs text-[#777777] font-normal leading-relaxed">
+                  <div className="w-3.5 h-3.5 sm:w-4 sm:h-4 rounded-sm bg-[#02B2C6] text-white flex items-center justify-center font-bold text-[9px] sm:text-[10px] shrink-0">
                     +
                   </div>
-                  <span>{bullet}</span>
+                  <span className="break-words">{bullet}</span>
                 </div>
               ))}
             </div>
 
-            {/* BOTONES DE ACCIÓN: Secundario Oscuro (#525862) y Primario Cian (#02B2C6) */}
-            <div className="flex flex-wrap items-center gap-3 pt-3">
+            {/* BOTONES DE ACCIÓN: en móvil distribuidos ordenadamente */}
+            <div className="grid grid-cols-2 sm:flex sm:flex-wrap items-center gap-2.5 pt-2 sm:pt-3">
               <Link
                 href={slide.primaryHref}
-                className="px-6 py-3 rounded-md font-semibold text-xs uppercase tracking-wider text-white bg-[#525862] hover:bg-[#3d424b] shadow-sm transition active:scale-95"
+                className="w-full sm:w-auto text-center px-4 sm:px-6 py-2.5 sm:py-3 rounded-lg font-bold text-[11px] sm:text-xs uppercase tracking-wider text-white bg-[#525862] hover:bg-[#3d424b] shadow-sm transition active:scale-95 flex items-center justify-center"
               >
                 {slide.primaryBtn}
               </Link>
 
               <a
                 href={slide.secondaryHref}
-                className="px-6 py-3 rounded-md font-semibold text-xs uppercase tracking-wider text-white bg-[#02B2C6] hover:bg-[#029baa] shadow-sm transition active:scale-95 flex items-center gap-1.5"
+                className="w-full sm:w-auto text-center px-4 sm:px-6 py-2.5 sm:py-3 rounded-lg font-bold text-[11px] sm:text-xs uppercase tracking-wider text-white bg-[#02B2C6] hover:bg-[#029baa] shadow-sm transition active:scale-95 flex items-center justify-center gap-1.5"
               >
-                <Calendar className="w-3.5 h-3.5" />
+                <Calendar className="w-3.5 h-3.5 shrink-0" />
                 <span>{slide.secondaryBtn}</span>
               </a>
             </div>
           </div>
         </div>
 
-        {/* Botón Flotante Inferior Izquierdo "Make an Appointment v" (Gris Pizarra #525862 de MedicalGuide) */}
+        {/* Botón Flotante Inferior Izquierdo "Agendar una Cita" */}
         <a
           href="#agendar-cita"
-          className="absolute bottom-6 left-6 z-20 hidden sm:flex items-center gap-2 bg-[#525862] hover:bg-[#3d424b] text-white px-5 py-3 rounded-md shadow-lg text-xs font-semibold uppercase tracking-wider transition active:scale-95"
+          className="absolute bottom-6 left-6 z-20 hidden lg:flex items-center gap-2 bg-[#525862] hover:bg-[#3d424b] text-white px-5 py-3 rounded-md shadow-lg text-xs font-semibold uppercase tracking-wider transition active:scale-95"
         >
           <span>Agendar una Cita</span>
           <ChevronDown className="w-4 h-4" />
         </a>
 
-        {/* Flechas Laterales de Navegación del Carrusel */}
+        {/* Flechas Laterales de Navegación del Carrusel (Solo en pantallas medianas y grandes para no tapar texto en móvil) */}
         <button
           onClick={prevSlide}
-          className="absolute left-4 top-1/2 -translate-y-1/2 z-20 w-10 h-10 rounded-md bg-white/30 hover:bg-[#02B2C6] text-white flex items-center justify-center backdrop-blur-sm transition shadow-md active:scale-95 cursor-pointer"
+          className="absolute left-4 top-1/2 -translate-y-1/2 z-20 hidden md:flex w-10 h-10 rounded-md bg-white/30 hover:bg-[#02B2C6] text-white items-center justify-center backdrop-blur-sm transition shadow-md active:scale-95 cursor-pointer"
           aria-label="Diapositiva anterior"
         >
           <ChevronLeft className="w-5 h-5" />
         </button>
         <button
           onClick={nextSlide}
-          className="absolute right-4 top-1/2 -translate-y-1/2 z-20 w-10 h-10 rounded-md bg-white/30 hover:bg-[#02B2C6] text-white flex items-center justify-center backdrop-blur-sm transition shadow-md active:scale-95 cursor-pointer"
+          className="absolute right-4 top-1/2 -translate-y-1/2 z-20 hidden md:flex w-10 h-10 rounded-md bg-white/30 hover:bg-[#02B2C6] text-white items-center justify-center backdrop-blur-sm transition shadow-md active:scale-95 cursor-pointer"
           aria-label="Diapositiva siguiente"
         >
           <ChevronRight className="w-5 h-5" />
         </button>
 
         {/* Indicadores de Barra Horizontal Inferiores en #02B2C6 */}
-        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-20 flex items-center gap-2">
+        <div className="absolute bottom-3 sm:bottom-6 left-1/2 -translate-x-1/2 z-20 flex items-center gap-1.5 sm:gap-2">
           {HERO_SLIDES.map((_, idx) => (
             <button
               key={idx}
               onClick={() => setCurrentSlide(idx)}
               className={`h-1.5 rounded-full transition-all duration-300 cursor-pointer ${
-                currentSlide === idx ? 'w-10 bg-[#02B2C6]' : 'w-4 bg-white/50 hover:bg-white/80'
+                currentSlide === idx ? 'w-8 sm:w-10 bg-[#02B2C6]' : 'w-3 sm:w-4 bg-white/60 hover:bg-white/90'
               }`}
               aria-label={`Diapositiva ${idx + 1}`}
             />
@@ -630,31 +630,31 @@ export function PublicLandingView() {
       </section>
 
       {/* =========================================================================
-          4. SECCIÓN AGENDAR CITA (FORMULARIO)
+          4. SECCIÓN AGENDAR CITA (FORMULARIO COMPACTO Y OPTIMIZADO)
           ========================================================================= */}
-      <section id="agendar-cita" className="max-w-3xl mx-auto px-4 sm:px-6 pt-6 pb-12 scroll-mt-28 lg:scroll-mt-32">
-        <div className="bg-white rounded-md border border-gray-100 shadow-xl overflow-hidden">
-            {/* Header Cian con Ícono de Calendario */}
-            <div className="bg-[#02B2C6] text-white p-6 sm:p-7">
+      <section id="agendar-cita" className="max-w-xl mx-auto px-4 sm:px-6 pt-2 pb-12 scroll-mt-24 lg:scroll-mt-28">
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-xl overflow-hidden">
+            {/* Header Cian con Ícono de Calendario Compacto */}
+            <div className="bg-[#02B2C6] text-white p-4 sm:p-5">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-md bg-white/20 flex items-center justify-center font-bold">
-                  <Calendar className="w-5 h-5" />
+                <div className="w-9 h-9 rounded-xl bg-white/20 flex items-center justify-center font-bold shrink-0">
+                  <Calendar className="w-4 h-4 text-white" />
                 </div>
                 <div>
-                  <span className="text-[10px] font-semibold uppercase tracking-widest text-cyan-100 block">
+                  <span className="text-[9px] font-bold uppercase tracking-widest text-cyan-100 block">
                     Reserva tu Turno en Línea
                   </span>
-                  <h3 className="text-xl sm:text-2xl font-bold uppercase tracking-tight text-white">
+                  <h3 className="text-lg sm:text-xl font-bold uppercase tracking-tight text-white leading-tight">
                     Agendar una Cita
                   </h3>
                 </div>
               </div>
             </div>
 
-            {/* Inputs del Formulario */}
-            <form onSubmit={handleBookingSubmit} className="p-6 sm:p-7 space-y-4">
+            {/* Inputs del Formulario Compacto */}
+            <form onSubmit={handleBookingSubmit} className="p-4 sm:p-6 space-y-3">
               {bookingSuccessMsg && (
-                <div className="p-3.5 rounded-md bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-semibold flex items-start gap-2 animate-in fade-in">
+                <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-semibold flex items-start gap-2 animate-in fade-in">
                   <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
                   <span>{bookingSuccessMsg}</span>
                 </div>
@@ -662,10 +662,10 @@ export function PublicLandingView() {
 
               {/* Alerta de autenticación requerida */}
               {!currentUser && (
-                <div className="p-3 rounded-md bg-amber-50 border border-amber-200 text-amber-800 text-xs flex items-center justify-between gap-2 animate-in fade-in">
-                  <div className="flex items-center gap-2">
-                    <Lock className="w-4 h-4 text-amber-600 shrink-0" />
-                    <span>Para confirmar tu cita debes iniciar sesión con tu cuenta.</span>
+                <div className="p-2.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 text-xs flex items-center justify-between gap-2 animate-in fade-in">
+                  <div className="flex items-center gap-2 text-[11px]">
+                    <Lock className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                    <span>Inicia sesión para confirmar tu cita.</span>
                   </div>
                   <button
                     type="button"
@@ -679,14 +679,14 @@ export function PublicLandingView() {
 
               {/* Sesión activa */}
               {currentUser && (
-                <div className="p-2.5 rounded-md bg-cyan-50/80 border border-[#02B2C6]/30 text-xs text-[#525862] flex items-center justify-between animate-in fade-in">
-                  <div className="flex items-center gap-2 truncate">
-                    <CheckCircle2 className="w-4 h-4 text-[#02B2C6] shrink-0" />
+                <div className="p-2 rounded-xl bg-cyan-50/80 border border-[#02B2C6]/30 text-xs text-[#525862] flex items-center justify-between animate-in fade-in">
+                  <div className="flex items-center gap-1.5 truncate text-[11px]">
+                    <CheckCircle2 className="w-3.5 h-3.5 text-[#02B2C6] shrink-0" />
                     <span className="truncate">
-                      Sesión activa: <strong>{currentUser.name}</strong>
+                      Sesión: <strong>{currentUser.name}</strong>
                     </span>
                   </div>
-                  <span className="text-[10px] uppercase font-bold text-[#02B2C6] px-2 py-0.5 rounded bg-white shadow-2xs shrink-0">
+                  <span className="text-[9px] uppercase font-bold text-[#02B2C6] px-1.5 py-0.5 rounded bg-white shadow-2xs shrink-0">
                     {currentUser.role}
                   </span>
                 </div>
@@ -694,13 +694,13 @@ export function PublicLandingView() {
 
               {/* Selector de Especialidad */}
               <div className="space-y-1">
-                <label className="text-[11px] font-semibold uppercase tracking-wider text-[#525862]">
+                <label className="text-[10px] font-bold uppercase tracking-wider text-[#525862]">
                   Especialidad o Tratamiento
                 </label>
                 <select
                   value={selectedServiceId}
                   onChange={(e) => setSelectedServiceId(Number(e.target.value))}
-                  className="w-full px-3.5 py-2.5 rounded-md border border-gray-200 bg-white text-xs text-[#525862] focus:outline-none focus:ring-2 focus:ring-[#02B2C6]"
+                  className="w-full px-3 py-2 rounded-xl border border-gray-200 bg-white text-xs text-[#525862] focus:outline-none focus:ring-2 focus:ring-[#02B2C6]"
                 >
                   {services.map((srv) => (
                     <option key={srv.id} value={srv.id}>
@@ -713,15 +713,15 @@ export function PublicLandingView() {
               {/* Selector de Especialista */}
               <div className="space-y-1">
                 <div className="flex items-center justify-between">
-                  <label className="text-[11px] font-semibold uppercase tracking-wider text-[#525862]">
+                  <label className="text-[10px] font-bold uppercase tracking-wider text-[#525862]">
                     Médico o Especialista MPPS
                   </label>
                   {matchingDoctors.length > 0 ? (
-                    <span className="text-[10px] text-emerald-600 font-bold flex items-center gap-1">
+                    <span className="text-[9.5px] text-emerald-600 font-bold flex items-center gap-1">
                       ✓ Coincide con {currentService?.name ? 'el servicio' : 'la especialidad'} ({matchingDoctors.length})
                     </span>
                   ) : (
-                    <span className="text-[10px] text-amber-600 font-bold flex items-center gap-1">
+                    <span className="text-[9.5px] text-amber-600 font-bold flex items-center gap-1">
                       ℹ️ Asignación por Secretaría
                     </span>
                   )}
@@ -729,7 +729,7 @@ export function PublicLandingView() {
                 <select
                   value={selectedDoctorId}
                   onChange={(e) => setSelectedDoctorId(e.target.value)}
-                  className="w-full px-3.5 py-2.5 rounded-md border border-gray-200 bg-white text-xs text-[#525862] focus:outline-none focus:ring-2 focus:ring-[#02B2C6]"
+                  className="w-full px-3 py-2 rounded-xl border border-gray-200 bg-white text-xs text-[#525862] focus:outline-none focus:ring-2 focus:ring-[#02B2C6]"
                 >
                   {matchingDoctors.length > 0 ? (
                     <>
@@ -749,16 +749,16 @@ export function PublicLandingView() {
                   )}
                 </select>
                 {matchingDoctors.length === 0 && (
-                  <p className="text-[10.5px] text-amber-800 bg-amber-50/80 p-2 rounded border border-amber-200/80 leading-relaxed">
+                  <p className="text-[10px] text-amber-800 bg-amber-50/80 p-2 rounded-lg border border-amber-200/80 leading-relaxed">
                     ℹ️ Este servicio no cuenta con un especialista predeterminado en agenda. Al confirmar tu cita vía WhatsApp o llamada telefónica, la secretaría te asignará un profesional colegiado.
                   </p>
                 )}
               </div>
 
               {/* Fecha y Hora */}
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                 <div className="space-y-1">
-                  <label className="text-[11px] font-semibold uppercase tracking-wider text-[#525862]">
+                  <label className="text-[10px] font-bold uppercase tracking-wider text-[#525862]">
                     Fecha
                   </label>
                   <input
@@ -766,17 +766,17 @@ export function PublicLandingView() {
                     min={todayDateStr || undefined}
                     value={appointmentDate}
                     onChange={(e) => setAppointmentDate(e.target.value)}
-                    className="w-full px-3.5 py-2.5 rounded-md border border-gray-200 bg-white text-xs text-[#525862] focus:outline-none focus:ring-2 focus:ring-[#02B2C6]"
+                    className="w-full px-3 py-2 rounded-xl border border-gray-200 bg-white text-xs text-[#525862] focus:outline-none focus:ring-2 focus:ring-[#02B2C6]"
                   />
                 </div>
                 <div className="space-y-1">
-                  <label className="text-[11px] font-semibold uppercase tracking-wider text-[#525862]">
+                  <label className="text-[10px] font-bold uppercase tracking-wider text-[#525862]">
                     Hora
                   </label>
                   <select
                     value={appointmentTime}
                     onChange={(e) => setAppointmentTime(e.target.value)}
-                    className="w-full px-3.5 py-2.5 rounded-md border border-gray-200 bg-white text-xs text-[#525862] focus:outline-none focus:ring-2 focus:ring-[#02B2C6]"
+                    className="w-full px-3 py-2 rounded-xl border border-gray-200 bg-white text-xs text-[#525862] focus:outline-none focus:ring-2 focus:ring-[#02B2C6]"
                   >
                     {CLINIC_SLOTS.map((slot) => {
                       const isOccupied = occupiedSlots.includes(slot)
@@ -792,7 +792,7 @@ export function PublicLandingView() {
 
               {/* Nombre Paciente */}
               <div className="space-y-1">
-                <label className="text-[11px] font-semibold uppercase tracking-wider text-[#525862]">
+                <label className="text-[10px] font-bold uppercase tracking-wider text-[#525862]">
                   Nombre Completo
                 </label>
                 <input
@@ -800,14 +800,14 @@ export function PublicLandingView() {
                   placeholder="Tu nombre y apellido"
                   value={patientName}
                   onChange={(e) => setPatientNameInput(e.target.value)}
-                  className="w-full px-3.5 py-2.5 rounded-md border border-gray-200 bg-white text-xs text-[#525862] placeholder:text-[#777777] focus:outline-none focus:ring-2 focus:ring-[#02B2C6]"
+                  className="w-full px-3 py-2 rounded-xl border border-gray-200 bg-white text-xs text-[#525862] placeholder:text-[#777777] focus:outline-none focus:ring-2 focus:ring-[#02B2C6]"
                 />
               </div>
 
               {/* Cédula y Teléfono */}
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                 <div className="space-y-1">
-                  <label className="text-[11px] font-semibold uppercase tracking-wider text-[#525862]">
+                  <label className="text-[10px] font-bold uppercase tracking-wider text-[#525862]">
                     Cédula
                   </label>
                   <input
@@ -815,11 +815,11 @@ export function PublicLandingView() {
                     placeholder="V-12345678"
                     value={patientCedula}
                     onChange={(e) => setPatientCedulaInput(e.target.value)}
-                    className="w-full px-3.5 py-2.5 rounded-md border border-gray-200 bg-white text-xs text-[#525862] placeholder:text-[#777777] focus:outline-none focus:ring-2 focus:ring-[#02B2C6]"
+                    className="w-full px-3 py-2 rounded-xl border border-gray-200 bg-white text-xs text-[#525862] placeholder:text-[#777777] focus:outline-none focus:ring-2 focus:ring-[#02B2C6]"
                   />
                 </div>
                 <div className="space-y-1">
-                  <label className="text-[11px] font-semibold uppercase tracking-wider text-[#525862]">
+                  <label className="text-[10px] font-bold uppercase tracking-wider text-[#525862]">
                     WhatsApp
                   </label>
                   <input
@@ -828,18 +828,18 @@ export function PublicLandingView() {
                     placeholder="+58 422 0241622"
                     value={patientPhone}
                     onChange={(e) => setPatientPhoneInput(e.target.value)}
-                    className="w-full px-3.5 py-2.5 rounded-md border border-gray-200 bg-white text-xs text-[#525862] placeholder:text-[#777777] focus:outline-none focus:ring-2 focus:ring-[#02B2C6]"
+                    className="w-full px-3 py-2 rounded-xl border border-gray-200 bg-white text-xs text-[#525862] placeholder:text-[#777777] focus:outline-none focus:ring-2 focus:ring-[#02B2C6]"
                   />
                 </div>
               </div>
 
-              {/* Botón Submit o Iniciar Sesión Obligatorio */}
+              {/* Botón Submit o Iniciar Sesión */}
               <div className="pt-2">
                 {currentUser ? (
                   <button
                     type="submit"
                     disabled={isBookingSubmitting}
-                    className="w-full py-3.5 rounded-md text-xs font-semibold uppercase tracking-wider text-white bg-[#02B2C6] hover:bg-[#029baa] shadow-sm transition active:scale-95 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                    className="w-full py-3 rounded-xl text-xs font-bold uppercase tracking-wider text-white bg-[#02B2C6] hover:bg-[#029baa] shadow-sm transition active:scale-95 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
                   >
                     <Calendar className="w-4 h-4" />
                     <span>{isBookingSubmitting ? 'Procesando Cita...' : 'Confirmar Cita Médica'}</span>
@@ -848,7 +848,7 @@ export function PublicLandingView() {
                   <button
                     type="button"
                     onClick={() => openAuthModal('signin')}
-                    className="w-full py-3.5 rounded-md text-xs font-semibold uppercase tracking-wider text-white bg-[#02B2C6] hover:bg-[#029baa] shadow-sm transition active:scale-95 flex items-center justify-center gap-2 cursor-pointer"
+                    className="w-full py-3 rounded-xl text-xs font-bold uppercase tracking-wider text-white bg-[#02B2C6] hover:bg-[#029baa] shadow-sm transition active:scale-95 flex items-center justify-center gap-2 cursor-pointer"
                   >
                     <Lock className="w-4 h-4" />
                     <span>Iniciar Sesión para Confirmar Cita</span>

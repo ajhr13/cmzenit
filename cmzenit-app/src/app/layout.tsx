@@ -1,4 +1,4 @@
-import type { Metadata } from 'next'
+import type { Metadata, Viewport } from 'next'
 import { Readex_Pro } from 'next/font/google'
 import './globals.css'
 import { Providers } from '@/components/Providers'
@@ -9,6 +9,12 @@ const readexPro = Readex_Pro({
   variable: '--font-readex-pro',
   display: 'swap',
 })
+
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 5,
+}
 
 export const metadata: Metadata = {
   title: 'Grupo Médico Zenit - Salud & Estética Integral',
@@ -27,9 +33,9 @@ export default function RootLayout({
   return (
     <html
       lang="es"
-      className={`${readexPro.variable} h-full antialiased`}
+      className={`${readexPro.variable} h-full antialiased overflow-x-hidden`}
     >
-      <body className="min-h-full flex flex-col font-sans bg-white text-[#777777]">
+      <body className="min-h-full flex flex-col font-sans bg-white text-[#777777] overflow-x-hidden w-full max-w-full">
         <Providers>{children}</Providers>
       </body>
     </html>
