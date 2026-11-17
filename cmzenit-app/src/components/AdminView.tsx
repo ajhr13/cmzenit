@@ -9,6 +9,7 @@ import {
   Briefcase,
   CalendarCheck,
   TrendingUp,
+  Award,
   Plus,
   CheckCircle,
   UserCheck,
@@ -29,6 +30,7 @@ export function AdminView() {
     addService,
     toggleDoctorActive,
     toggleServiceActive,
+    patientMemberships,
   } = useCMZenit()
 
   const router = useRouter()
@@ -312,6 +314,82 @@ export function AdminView() {
               </p>
               <span className="text-[10px] text-zinc-400">De {citasAtendidas} citas atendidas</span>
             </div>
+
+            {/* KPI 5: AFILIADOS & MEMBRESÍAS ZENIT */}
+            {(() => {
+              const allMems = Object.values(patientMemberships)
+              const totalTitulares = allMems.length
+              const totalBens = allMems.reduce((acc, m) => acc + (m.beneficiaries?.length || 0), 0)
+              const totalVidas = totalTitulares + totalBens
+
+              return (
+                <div className="p-5 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-3xl shadow-sm space-y-1 sm:col-span-2 lg:col-span-4">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-zinc-100 dark:border-zinc-800 pb-2">
+                    <div className="flex items-center gap-2">
+                      <div className="w-8 h-8 rounded-xl bg-amber-500 text-white flex items-center justify-center font-bold">
+                        <Award className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <span className="text-xs font-black uppercase text-zinc-900 dark:text-zinc-100">
+                          Programa de Afiliados Zenit Vital
+                        </span>
+                        <p className="text-[10px] text-zinc-400">
+                          {totalTitulares} titulares • {totalBens} familiares anclados ({totalVidas} vidas cubiertas)
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2 text-xs font-bold">
+                      <span className="px-2.5 py-1 rounded-xl bg-amber-50 text-amber-800 border border-amber-200">
+                        🥉 Bronce: {allMems.filter((m) => m.tier === 'bronce').length}
+                      </span>
+                      <span className="px-2.5 py-1 rounded-xl bg-cyan-50 text-cyan-800 border border-cyan-200">
+                        🥈 Plata: {allMems.filter((m) => m.tier === 'plata').length}
+                      </span>
+                      <span className="px-2.5 py-1 rounded-xl bg-yellow-50 text-yellow-800 border border-yellow-300">
+                        🥇 Oro: {allMems.filter((m) => m.tier === 'oro').length}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Tabla resumida para Dirección Médica */}
+                  <div className="pt-2 overflow-x-auto text-xs">
+                    <table className="w-full text-left">
+                      <thead className="text-[10px] uppercase font-bold text-zinc-400">
+                        <tr>
+                          <th className="py-2 px-3">Titular</th>
+                          <th className="py-2 px-3">Plan</th>
+                          <th className="py-2 px-3">Beneficiarios Anclados</th>
+                          <th className="py-2 px-3">Cupos Restantes</th>
+                          <th className="py-2 px-3">Vigencia</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800 text-[11px]">
+                        {allMems.map((m) => (
+                          <tr key={m.id} className="hover:bg-slate-50 dark:hover:bg-zinc-800/40">
+                            <td className="py-2 px-3 font-bold text-zinc-800 dark:text-zinc-200">
+                              {m.patientName} <span className="font-mono text-zinc-400">({m.patientCedula})</span>
+                            </td>
+                            <td className="py-2 px-3">
+                              <span className="uppercase font-black text-[10px] text-amber-600">
+                                {m.tier}
+                              </span>
+                            </td>
+                            <td className="py-2 px-3 text-zinc-600 dark:text-zinc-400">
+                              {m.beneficiaries?.length || 0} familiares: {m.beneficiaries?.map((b) => b.name).join(', ') || 'Ninguno'}
+                            </td>
+                            <td className="py-2 px-3 font-medium">
+                              Gen: {m.benefitsRemaining.general} • Esp: {m.benefitsRemaining.specialist} • Lab: {m.benefitsRemaining.lab}
+                            </td>
+                            <td className="py-2 px-3 font-mono text-zinc-400">{m.expiryDate}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )
+            })()}
           </div>
         </section>
       )}

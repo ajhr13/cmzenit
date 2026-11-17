@@ -14,7 +14,20 @@ import {
   VitalSigns,
   MedicalRecordAttachment,
   PatientClinicalProfile,
+  MembershipTier,
+  PatientMembership,
+  MembershipBeneficiary,
+  CoverageUsageItem,
+  PlanChangeHistory,
 } from '@/types/database.types'
+import { MEMBERSHIP_PLANS, getInitialBenefitsForTier } from '@/lib/membershipsData'
+
+export interface EnrichedPatientMembership extends PatientMembership {
+  isBeneficiary: boolean
+  beneficiaryData?: MembershipBeneficiary
+  titularCedula: string
+  titularName: string
+}
 import {
   isSupabaseConfigured,
   supabase,
@@ -154,93 +167,406 @@ interface CMZenitContextType {
   uploadMedicalAttachment: (
     file: File
   ) => Promise<{ url: string; name: string; size_kb: number; type: string }>
+
+  // Módulo de Membresías Zenit (Bronce, Plata, Oro)
+  patientMemberships: Record<string, PatientMembership>
+  getPatientMembership: (cedula?: string) => EnrichedPatientMembership | null
+  subscribeToMembership: (data: {
+    patientCedula: string
+    patientName: string
+    patientEmail: string
+    patientPhone: string
+    tier: MembershipTier
+    billingCycle: 'anual' | 'mensual'
+    beneficiaries?: Array<{ name: string; cedula: string; relationship: string; phone?: string }>
+  }) => Promise<{ success: boolean; membership?: PatientMembership; error?: string }>
+  changeMembershipPlan: (
+    titularCedula: string,
+    newTier: MembershipTier,
+    billingCycle?: 'anual' | 'mensual'
+  ) => Promise<{ success: boolean; message: string; isUpgrade: boolean; error?: string }>
+  consumeMembershipBenefit: (params: {
+    titularCedula: string
+    benefitType: 'general' | 'specialist' | 'dental' | 'lab' | 'cardio' | 'aesthetic' | 'descuento'
+    serviceName: string
+    category?: ClinicArea | 'laboratorio' | 'odontologia' | 'cardiologia'
+    consumedByName: string
+    consumedByCedula: string
+    isTitular: boolean
+    relationship?: string
+    doctorName?: string
+    discountPercent?: number
+    wasFullyCovered: boolean
+    costSavedUsd: number
+    notes?: string
+  }) => Promise<{ success: boolean; error?: string }>
+  addBeneficiaryToMembership: (
+    titularCedula: string,
+    beneficiary: { name: string; cedula: string; relationship: string; phone?: string }
+  ) => Promise<{ success: boolean; error?: string }>
+  removeBeneficiaryFromMembership: (
+    titularCedula: string,
+    beneficiaryCedula: string
+  ) => Promise<{ success: boolean; error?: string }>
 }
 
 // Datos semilla de respaldo
-// Datos semilla de respaldo enriquecidos con la oferta médica y estética completa
+// Datos semilla de respaldo enriquecidos con la oferta médica y estética completa oficial
 const INITIAL_SERVICES: Service[] = [
-  // --- SALUD / ESPECIALIDADES CLÍNICAS ---
+  // =========================================================================
+  // 1. ATENCIÓN MÉDICA PRIMARIA & ESPECIALIDADES CLÍNICAS / QUIRÚRGICAS
+  // =========================================================================
   {
     id: 1,
-    name: 'Consulta General & Medicina Familiar',
+    name: 'Medicina General',
     category: 'salud',
     price: 30.0,
     duration: '30 min',
-    description: 'Evaluación médica integral, control de signos vitales, chequeo de salud general y emisión de récipe digital.',
-    promo_tag: 'Atención Diaria',
+    description: 'Atención médica primaria, evaluación física integral, control preventivo, emisión de récipe digital y órdenes de laboratorio.',
+    promo_tag: 'Atención Primaria',
     is_active: true,
     created_at: new Date().toISOString(),
   },
   {
     id: 2,
-    name: 'Hospitalización & Cuidados Clínicos',
+    name: 'Medicina Interna',
     category: 'salud',
-    price: 120.0,
-    duration: '24 horas',
-    description: 'Habitaciones individuales con monitoreo multiparámetro, atención de enfermería 24/7 y administración de tratamiento endovenoso.',
-    promo_tag: 'Monitoreo 24/7',
+    price: 45.0,
+    duration: '40 min',
+    description: 'Diagnóstico y tratamiento integral del paciente adulto, manejo de hipertensión, diabetes, dislipidemias y patologías crónicas.',
+    promo_tag: 'Más Solicitado',
     is_active: true,
     created_at: new Date().toISOString(),
   },
   {
     id: 3,
-    name: 'Oftalmología & Evaluación Visual',
+    name: 'Pediatría',
     category: 'salud',
-    price: 50.0,
+    price: 45.0,
     duration: '40 min',
-    description: 'Examen de agudeza visual, biomicroscopía en lámpara de hendidura, tonometría (presión ocular) y fondo de ojo.',
-    promo_tag: 'Salud Visual',
+    description: 'Control de crecimiento y desarrollo del niño sano, despistaje clínico, esquema de vacunación y atención de enfermedades infantiles.',
+    promo_tag: 'Salud Infantil',
     is_active: true,
     created_at: new Date().toISOString(),
   },
   {
     id: 4,
-    name: 'Ginecología & Obstetricia Integral',
+    name: 'Ginecología y Obstetricia',
     category: 'salud',
     price: 55.0,
     duration: '45 min',
-    description: 'Control ginecológico preventivo, toma de citología (Papanicolau), ecografía pélvica/transvaginal y control prenatal.',
+    description: 'Control ginecológico preventivo, toma de citología (Papanicolau), control prenatal, ecografía pélvica y transvaginal.',
     promo_tag: 'Chequeo Mujer',
     is_active: true,
     created_at: new Date().toISOString(),
   },
   {
     id: 5,
-    name: 'Cardiología & Ecocardiografía',
+    name: 'Cardiología Adulta',
     category: 'salud',
     price: 55.0,
     duration: '45 min',
-    description: 'Electrocardiograma digital, evaluación preoperatoria y control de presión arterial.',
-    promo_tag: 'Más Solicitado',
+    description: 'Evaluación cardiovascular integral, electrocardiograma digital (ECG), ecocardiograma, riesgo quirúrgico y control de hipertensión.',
+    promo_tag: 'Alta Especialidad',
     is_active: true,
     created_at: new Date().toISOString(),
   },
   {
     id: 6,
-    name: 'Medicina Interna',
+    name: 'Cardiología Infantil',
     category: 'salud',
-    price: 45.0,
+    price: 60.0,
+    duration: '45 min',
+    description: 'Detección y seguimiento de soplos, arritmias, cardiopatías congénitas y evaluación cardiovascular para niños y adolescentes.',
+    promo_tag: 'Cardio Pediátrica',
+    is_active: true,
+    created_at: new Date().toISOString(),
+  },
+  {
+    id: 7,
+    name: 'Cirugía General',
+    category: 'salud',
+    price: 50.0,
     duration: '40 min',
-    description: 'Diagnóstico integral del adulto, control de glicemia, perfil metabólico y chequeo preventivo.',
+    description: 'Valoración quirúrgica, tratamiento de hernias, patología vesicular, lipomas, quistes y procedimientos ambulatorios menores.',
+    promo_tag: 'Quirúrgico',
+    is_active: true,
+    created_at: new Date().toISOString(),
+  },
+  {
+    id: 8,
+    name: 'Cirugía Cardiovascular',
+    category: 'salud',
+    price: 65.0,
+    duration: '45 min',
+    description: 'Diagnóstico y tratamiento de enfermedades vasculares periféricas, várices, trombosis, accesos vasculares y patología arterial.',
+    promo_tag: 'Vascular',
+    is_active: true,
+    created_at: new Date().toISOString(),
+  },
+  {
+    id: 9,
+    name: 'Cirugía Oncológica',
+    category: 'salud',
+    price: 65.0,
+    duration: '45 min',
+    description: 'Evaluación multidisciplinaria y resolución quirúrgica de lesiones tumorales de mama, partes blandas, piel y tracto digestivo.',
+    promo_tag: 'Oncología',
+    is_active: true,
+    created_at: new Date().toISOString(),
+  },
+  {
+    id: 10,
+    name: 'Traumatología / Cirugía de la Mano',
+    category: 'salud',
+    price: 50.0,
+    duration: '40 min',
+    description: 'Manejo de lesiones articulares, fracturas, esguinces, tendinitis, túnel carpiano y patologías reconstructivas de la mano.',
     promo_tag: null,
     is_active: true,
     created_at: new Date().toISOString(),
   },
   {
-    id: 19,
-    name: 'Odontología Integral & Diseño de Sonrisa',
+    id: 11,
+    name: 'Urología',
+    category: 'salud',
+    price: 50.0,
+    duration: '40 min',
+    description: 'Diagnóstico y manejo de patologías de próstata, litiasis renal (cálculos), infecciones urinarias y salud urogenital masculina y femenina.',
+    promo_tag: null,
+    is_active: true,
+    created_at: new Date().toISOString(),
+  },
+  {
+    id: 12,
+    name: 'Oftalmología / Cirugía Oculoplástica',
+    category: 'salud',
+    price: 50.0,
+    duration: '40 min',
+    description: 'Examen de agudeza visual, biomicroscopía con lámpara de hendidura, tonometría, fondo de ojo y cirugía funcional de párpados.',
+    promo_tag: 'Salud Visual',
+    is_active: true,
+    created_at: new Date().toISOString(),
+  },
+  {
+    id: 13,
+    name: 'Odontología / Ortodoncia',
     category: 'salud',
     price: 40.0,
     duration: '45 min',
-    description: 'Profilaxis ultrasónica, odontología estética, resinas de alta densidad, blanqueamiento dental y ortodoncia correctiva.',
-    promo_tag: 'Sonrisa Perfecta',
+    description: 'Profilaxis ultrasónica profunda, resinas estéticas nanohíbridas, blanqueamiento dental, frenillos y ortodoncia correctiva.',
+    promo_tag: 'Salud Dental',
+    is_active: true,
+    created_at: new Date().toISOString(),
+  },
+  {
+    id: 14,
+    name: 'Odontopediatría',
+    category: 'salud',
+    price: 45.0,
+    duration: '40 min',
+    description: 'Cuidado dental preventivo y restaurador adaptado a niños y bebés, sellantes de fosas, pulpotomías y manejo amigable del paciente pediátrico.',
+    promo_tag: 'Dental Infantil',
+    is_active: true,
+    created_at: new Date().toISOString(),
+  },
+  {
+    id: 15,
+    name: 'Patología Bucal',
+    category: 'salud',
+    price: 45.0,
+    duration: '40 min',
+    description: 'Detección, diagnóstico clínico e histopatológico de úlceras, lesiones de mucosa bucal, aftas crónicas y despistaje de cáncer oral.',
+    promo_tag: null,
+    is_active: true,
+    created_at: new Date().toISOString(),
+  },
+  {
+    id: 16,
+    name: 'Neumonología',
+    category: 'salud',
+    price: 50.0,
+    duration: '40 min',
+    description: 'Estudio de enfermedades del aparato respiratorio, asma, EPOC, bronquitis, secuelas post-infecciosas y evaluación de espirometría.',
+    promo_tag: null,
+    is_active: true,
+    created_at: new Date().toISOString(),
+  },
+  {
+    id: 17,
+    name: 'Gastroenterología',
+    category: 'salud',
+    price: 55.0,
+    duration: '40 min',
+    description: 'Evaluación y tratamiento de gastritis, reflujo gastroesofágico, colon irritable, hígado graso y solicitud de endoscopias diagnósticas.',
+    promo_tag: null,
+    is_active: true,
+    created_at: new Date().toISOString(),
+  },
+  {
+    id: 18,
+    name: 'Oncología Médica',
+    category: 'salud',
+    price: 65.0,
+    duration: '45 min',
+    description: 'Consulta médica oncológica, planes de quimioterapia, inmunoterapia, segunda opinión médica y seguimiento clínico especializado.',
+    promo_tag: 'Oncología',
+    is_active: true,
+    created_at: new Date().toISOString(),
+  },
+  {
+    id: 19,
+    name: 'Endocrinología',
+    category: 'salud',
+    price: 50.0,
+    duration: '40 min',
+    description: 'Diagnóstico de trastornos de tiroides, síndrome metabólico, diabetes mellitus, resistencia a la insulina y desbalances hormonales.',
+    promo_tag: null,
+    is_active: true,
+    created_at: new Date().toISOString(),
+  },
+  {
+    id: 20,
+    name: 'Neurología',
+    category: 'salud',
+    price: 55.0,
+    duration: '45 min',
+    description: 'Abordaje de cefaleas crónicas, migrañas, epilepsia, temblores, neuropatías, trastornos del sueño y afecciones cerebrovasculares.',
+    promo_tag: null,
+    is_active: true,
+    created_at: new Date().toISOString(),
+  },
+  {
+    id: 21,
+    name: 'Neurocirugía',
+    category: 'salud',
+    price: 70.0,
+    duration: '45 min',
+    description: 'Evaluación y manejo quirúrgico de hernias discales, patología de columna vertebral, compresión radicular y tumores del sistema nervioso.',
+    promo_tag: 'Alta Cirugía',
+    is_active: true,
+    created_at: new Date().toISOString(),
+  },
+  {
+    id: 22,
+    name: 'Nefrología / Diálisis',
+    category: 'salud',
+    price: 55.0,
+    duration: '45 min',
+    description: 'Control de función renal, insuficiencia renal aguda y crónica, glomerulopatías, nefropatía diabética y seguimiento de diálisis.',
+    promo_tag: null,
+    is_active: true,
+    created_at: new Date().toISOString(),
+  },
+  {
+    id: 23,
+    name: 'Infectología',
+    category: 'salud',
+    price: 50.0,
+    duration: '40 min',
+    description: 'Tratamiento de infecciones bacterianas, virales, micóticas complejas, enfermedades de transmisión sexual y asesoría en antibioticoterapia.',
+    promo_tag: null,
+    is_active: true,
+    created_at: new Date().toISOString(),
+  },
+  {
+    id: 24,
+    name: 'Dermatología',
+    category: 'salud',
+    price: 50.0,
+    duration: '40 min',
+    description: 'Diagnóstico clínico de enfermedades de piel, pelo y uñas: acné, dermatitis, psoriasis, rosácea, despistaje de lunares y biopsias.',
+    promo_tag: 'Piel & Salud',
+    is_active: true,
+    created_at: new Date().toISOString(),
+  },
+  {
+    id: 25,
+    name: 'Nutrición',
+    category: 'salud',
+    price: 35.0,
+    duration: '45 min',
+    description: 'Evaluación antropométrica y bioimpedancia, diseño de planes de alimentación personalizados para control de peso y soporte nutricional clínico.',
+    promo_tag: 'Nutrición Clínica',
+    is_active: true,
+    created_at: new Date().toISOString(),
+  },
+  {
+    id: 26,
+    name: 'Psicología',
+    category: 'salud',
+    price: 40.0,
+    duration: '50 min',
+    description: 'Atención psicológica individual, manejo de ansiedad, depresión, estrés, duelo, terapia cognitivo-conductual y apoyo emocional.',
+    promo_tag: 'Salud Mental',
+    is_active: true,
+    created_at: new Date().toISOString(),
+  },
+  {
+    id: 27,
+    name: 'Fisioterapia y Rehabilitación',
+    category: 'salud',
+    price: 35.0,
+    duration: '50 min',
+    description: 'Rehabilitación física osteomuscular, electroterapia, kinesioterapia, tratamiento para lumbalgias y recuperación funcional postoperatoria.',
+    promo_tag: 'Rehabilitación',
     is_active: true,
     created_at: new Date().toISOString(),
   },
 
-  // --- ESPACIO ESTÉTICA: MASAJES Y CORPORAL (Volante CMZenit) ---
+  // =========================================================================
+  // 2. URGENCIAS Y SERVICIOS 24 HORAS
+  // =========================================================================
   {
-    id: 8,
+    id: 28,
+    name: 'Emergencia 24h',
+    category: 'salud',
+    price: 50.0,
+    duration: 'Inmediata',
+    description: 'Atención médica continua las 24 horas, triaje de urgencias, estabilización de pacientes, suturas y terapia endovenosa rápida.',
+    promo_tag: 'Servicio 24 Horas',
+    is_active: true,
+    created_at: new Date().toISOString(),
+  },
+  {
+    id: 29,
+    name: 'Laboratorio Clínico 24h',
+    category: 'salud',
+    price: 25.0,
+    duration: 'Toma inmediata',
+    description: 'Toma de muestras y procesamiento de exámenes clínicos 24h: hematología completa, química sanguínea, perfil lipídico, uroanálisis y pruebas especiales.',
+    promo_tag: 'Laboratorio 24h',
+    is_active: true,
+    created_at: new Date().toISOString(),
+  },
+  {
+    id: 30,
+    name: 'Hospitalización & Cuidados Clínicos 24h',
+    category: 'salud',
+    price: 120.0,
+    duration: '24 horas',
+    description: 'Habitaciones individuales climatizadas con monitoreo multiparámetro, enfermería permanente 24/7 y administración de medicamentos endovenosos.',
+    promo_tag: 'Hospitalización 24/7',
+    is_active: true,
+    created_at: new Date().toISOString(),
+  },
+
+  // =========================================================================
+  // 3. MEDICINA ESTÉTICA & DERMOESTÉTICA INTEGRAL
+  // =========================================================================
+  {
+    id: 31,
+    name: 'Medicina Estética & Dermoestética',
+    category: 'estetica',
+    price: 60.0,
+    duration: '45 min',
+    description: 'Evaluación facial y corporal integral por médico especialista, armonización facial, toxina botulínica, ácido hialurónico y bioestimuladores de colágeno.',
+    promo_tag: 'Médico Estético',
+    is_active: true,
+    created_at: new Date().toISOString(),
+  },
+  {
+    id: 32,
     name: 'Masajes Post-Operatorios (Drenaje Linfático)',
     category: 'estetica',
     price: 40.0,
@@ -251,42 +577,7 @@ const INITIAL_SERVICES: Service[] = [
     created_at: new Date().toISOString(),
   },
   {
-    id: 9,
-    name: 'Masajes Relajantes & Antiestrés',
-    category: 'estetica',
-    price: 35.0,
-    duration: '50 min',
-    description: 'Terapia manual corporal con aceites botánicos y aromaterapia para descargar tensiones musculares y restaurar el bienestar.',
-    promo_tag: 'Bienestar',
-    is_active: true,
-    created_at: new Date().toISOString(),
-  },
-  {
-    id: 10,
-    name: 'Tratamiento Anticelulítico & Moldeador',
-    category: 'estetica',
-    price: 70.0,
-    duration: '60 min',
-    description: 'Protocolo reductor intensivo combinado con ultracavitación, radiofrecuencia, criolipólisis y ultrasonido.',
-    promo_tag: 'Combinado 4 en 1',
-    is_active: true,
-    created_at: new Date().toISOString(),
-  },
-  {
-    id: 11,
-    name: 'Depilación Láser Diodo (Sesión)',
-    category: 'estetica',
-    price: 45.0,
-    duration: '30 min',
-    description: 'Cabezal refrigerado con tecnología indolora para eliminación progresiva del vello en cualquier fototipo cutáneo.',
-    promo_tag: 'Paquete Disponible',
-    is_active: true,
-    created_at: new Date().toISOString(),
-  },
-
-  // --- ESPACIO ESTÉTICA: FACIAL (Volante CMZenit) ---
-  {
-    id: 12,
+    id: 33,
     name: 'Hidrafacial + Radiofrecuencia Facial',
     category: 'estetica',
     price: 65.0,
@@ -297,68 +588,24 @@ const INITIAL_SERVICES: Service[] = [
     created_at: new Date().toISOString(),
   },
   {
-    id: 13,
-    name: 'Dermoabrasión & Ultrasonido Facial',
+    id: 34,
+    name: 'Tratamiento Anticelulítico & Moldeador 4 en 1',
     category: 'estetica',
-    price: 50.0,
-    duration: '45 min',
-    description: 'Exfoliación mecánica profunda con punta de diamante y ondas ultrasónicas para renovar la capa córnea y limpiar poros.',
-    promo_tag: 'Renovación',
+    price: 70.0,
+    duration: '60 min',
+    description: 'Protocolo reductor intensivo combinado con ultracavitación, radiofrecuencia, criolipólisis y ultrasonido.',
+    promo_tag: 'Combinado 4 en 1',
     is_active: true,
     created_at: new Date().toISOString(),
   },
   {
-    id: 14,
-    name: 'Peeling Ultrasónico Profundo',
-    category: 'estetica',
-    price: 40.0,
-    duration: '40 min',
-    description: 'Espátula ultrasónica de alta vibración para remover células muertas, comedones y exceso de sebo sin agredir la piel.',
-    promo_tag: null,
-    is_active: true,
-    created_at: new Date().toISOString(),
-  },
-  {
-    id: 15,
-    name: 'Terapia con Martillo en Frío (Crioterapia Facial)',
-    category: 'estetica',
-    price: 35.0,
-    duration: '30 min',
-    description: 'Cierre de poros con frío localizado, reducción de inflamación, sellado de nutrientes y efecto tensor inmediato.',
-    promo_tag: 'Calmante',
-    is_active: true,
-    created_at: new Date().toISOString(),
-  },
-  {
-    id: 16,
-    name: 'Fototerapia Facial con Máscara LED',
-    category: 'estetica',
-    price: 35.0,
-    duration: '35 min',
-    description: 'Luces terapéuticas espectrales (roja para colágeno, azul bactericida para acné y verde para despigmentación celular).',
-    promo_tag: 'Fotónica',
-    is_active: true,
-    created_at: new Date().toISOString(),
-  },
-  {
-    id: 17,
-    name: 'Protocolo de Hidratación & Protector Solar',
+    id: 35,
+    name: 'Depilación Láser Diodo con Cabezal Frío',
     category: 'estetica',
     price: 45.0,
-    duration: '45 min',
-    description: 'Velo hidratante concentrado, mascarilla hidroplástica regeneradora y sellado con protector solar dermatológico de amplio espectro.',
-    promo_tag: 'Nutrición',
-    is_active: true,
-    created_at: new Date().toISOString(),
-  },
-  {
-    id: 18,
-    name: 'Armonización Facial & Toxina Botulínica (Bótox)',
-    category: 'estetica',
-    price: 180.0,
-    duration: '60 min',
-    description: 'Perfilado labial con ácido hialurónico y atenuación suave de arrugas de expresión con toxina botulínica.',
-    promo_tag: 'Médico Especialista',
+    duration: '30 min',
+    description: 'Cabezal refrigerado con tecnología indolora para eliminación progresiva y definitiva del vello en cualquier fototipo cutáneo.',
+    promo_tag: 'Láser Indoloro',
     is_active: true,
     created_at: new Date().toISOString(),
   },
@@ -862,6 +1109,488 @@ export function CMZenitProvider({ children }: { children: ReactNode }) {
             }
           : null
       )
+    }
+  }
+
+  // Módulo de Membresías de Salud Zenit (Bronce, Plata, Oro)
+  const [patientMemberships, setPatientMemberships] = useState<Record<string, PatientMembership>>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const saved = localStorage.getItem('cmzenit_patient_memberships')
+        if (saved) return JSON.parse(saved)
+      } catch (e) {
+        console.error('Error loading patient memberships from localStorage', e)
+      }
+    }
+    return {
+      'V-18456789': {
+        id: 'mem-zenit-001',
+        patientCedula: 'V-18456789',
+        patientName: 'Juan Pérez (Paciente)',
+        patientEmail: 'paciente@cmzenit.com',
+        patientPhone: '+58 412 1234567',
+        tier: 'plata',
+        billingCycle: 'anual',
+        priceUsd: 140,
+        startDate: '2026-01-15',
+        expiryDate: '2027-01-15',
+        status: 'activa',
+        beneficiaries: [
+          {
+            id: 'ben-1',
+            name: 'María Elena Pérez',
+            cedula: 'V-20123456',
+            relationship: 'Esposa / Pareja',
+            phone: '+58 414 9988776',
+            addedAt: '2026-01-15',
+          },
+          {
+            id: 'ben-2',
+            name: 'Sebastián Pérez',
+            cedula: 'V-32456789',
+            relationship: 'Hijo',
+            phone: '+58 412 1234567',
+            addedAt: '2026-01-15',
+          },
+        ],
+        benefitsRemaining: {
+          general: 3,
+          specialist: 2,
+          dental: 2,
+          lab: 1,
+          cardio: 1,
+          aesthetic: 0,
+        },
+        consultsRemaining: {
+          general: 3,
+          specialist: 2,
+        },
+        coverageHistory: [
+          {
+            id: 'cov-1',
+            date: '2026-02-10',
+            serviceName: 'Medicina General',
+            category: 'salud',
+            consumedBy: { name: 'Juan Pérez', cedula: 'V-18456789', isTitular: true },
+            doctorName: 'Dra. Carmen Mendoza',
+            benefitType: 'general',
+            wasFullyCovered: true,
+            costSavedUsd: 30,
+            notes: 'Consulta de rutina control de tensión arterial. Exonerado 100% por Membresía Plata.',
+          },
+          {
+            id: 'cov-2',
+            date: '2026-02-28',
+            serviceName: 'Cardiología Adulta',
+            category: 'salud',
+            consumedBy: { name: 'Juan Pérez', cedula: 'V-18456789', isTitular: true },
+            doctorName: 'Dr. Carlos Mendoza',
+            benefitType: 'specialist',
+            wasFullyCovered: true,
+            costSavedUsd: 55,
+            notes: 'Evaluación cardiológica anual y riesgo quirúrgico. Exonerado 100% por cuota de especialista.',
+          },
+          {
+            id: 'cov-3',
+            date: '2026-03-05',
+            serviceName: 'Laboratorio Clínico 24h',
+            category: 'laboratorio',
+            consumedBy: { name: 'María Elena Pérez', cedula: 'V-20123456', isTitular: false, relationship: 'Esposa' },
+            benefitType: 'lab',
+            wasFullyCovered: true,
+            costSavedUsd: 25,
+            notes: 'Perfil 20 completo procesado en laboratorio 24h. Cubierto por cuota anual familiar.',
+          },
+        ],
+        planHistory: [
+          {
+            date: '2026-01-15',
+            fromTier: 'bronce',
+            toTier: 'plata',
+            type: 'upgrade',
+            priceDifferenceUsd: 80,
+            note: 'Upgrade familiar para incorporar a cónyuge e hijo. Cuota ampliada exitosamente.',
+          },
+        ],
+      },
+    }
+  })
+
+  const getPatientMembership = (cedula?: string): EnrichedPatientMembership | null => {
+    const key = (cedula || currentUser?.cedula || 'V-18456789').trim().toUpperCase()
+    if (patientMemberships[key]) {
+      const m = patientMemberships[key]
+      return {
+        ...m,
+        isBeneficiary: false,
+        titularCedula: m.patientCedula,
+        titularName: m.patientName,
+      }
+    }
+    // Buscar si la cédula pertenece a un beneficiario anclado al titular
+    for (const m of Object.values(patientMemberships)) {
+      const foundBen = m.beneficiaries?.find(
+        (b) => b.cedula.trim().toUpperCase() === key
+      )
+      if (foundBen) {
+        return {
+          ...m,
+          isBeneficiary: true,
+          beneficiaryData: foundBen,
+          titularCedula: m.patientCedula,
+          titularName: m.patientName,
+        }
+      }
+    }
+    return null
+  }
+
+  const subscribeToMembership = async (data: {
+    patientCedula: string
+    patientName: string
+    patientEmail: string
+    patientPhone: string
+    tier: MembershipTier
+    billingCycle: 'anual' | 'mensual'
+    beneficiaries?: Array<{ name: string; cedula: string; relationship: string; phone?: string }>
+  }) => {
+    try {
+      const key = data.patientCedula.trim().toUpperCase()
+      const plan = MEMBERSHIP_PLANS.find((p) => p.id === data.tier)
+      const price = data.billingCycle === 'anual' ? (plan?.priceAnnual || 140) : (plan?.priceMonthly || 14)
+      const now = new Date()
+      const expiry = new Date(now)
+      if (data.billingCycle === 'anual') {
+        expiry.setFullYear(now.getFullYear() + 1)
+      } else {
+        expiry.setMonth(now.getMonth() + 1)
+      }
+
+      const initialBenefits = getInitialBenefitsForTier(data.tier)
+
+      const formattedBeneficiaries: MembershipBeneficiary[] = (data.beneficiaries || []).map((b, idx) => ({
+        id: `ben-${Date.now()}-${idx}`,
+        name: b.name,
+        cedula: b.cedula.trim().toUpperCase(),
+        relationship: b.relationship,
+        phone: b.phone,
+        addedAt: now.toISOString().split('T')[0],
+      }))
+
+      const newMembership: PatientMembership = {
+        id: `mem-${Date.now()}`,
+        patientCedula: key,
+        patientName: data.patientName,
+        patientEmail: data.patientEmail,
+        patientPhone: data.patientPhone,
+        tier: data.tier,
+        billingCycle: data.billingCycle,
+        priceUsd: price,
+        startDate: now.toISOString().split('T')[0],
+        expiryDate: expiry.toISOString().split('T')[0],
+        status: 'activa',
+        beneficiaries: formattedBeneficiaries,
+        benefitsRemaining: initialBenefits,
+        consultsRemaining: {
+          general: initialBenefits.general,
+          specialist: initialBenefits.specialist,
+        },
+        coverageHistory: [],
+        planHistory: [
+          {
+            date: now.toISOString().split('T')[0],
+            fromTier: data.tier,
+            toTier: data.tier,
+            type: 'renovacion',
+            priceDifferenceUsd: 0,
+            note: `Afiliación inicial al plan ${plan?.name} (${data.billingCycle === 'anual' ? 'Anual' : 'Mensual'}).`,
+          },
+        ],
+      }
+
+      setPatientMemberships((prev) => {
+        const next = { ...prev, [key]: newMembership }
+        if (typeof window !== 'undefined') {
+          try {
+            localStorage.setItem('cmzenit_patient_memberships', JSON.stringify(next))
+          } catch (e) {
+            console.error('Error saving patient memberships to localStorage', e)
+          }
+        }
+        return next
+      })
+
+      return { success: true, membership: newMembership }
+    } catch (err: any) {
+      return { success: false, error: err.message || 'Error al procesar la membresía' }
+    }
+  }
+
+  const changeMembershipPlan = async (
+    titularCedula: string,
+    newTier: MembershipTier,
+    billingCycle?: 'anual' | 'mensual'
+  ): Promise<{ success: boolean; message: string; isUpgrade: boolean; error?: string }> => {
+    try {
+      const key = titularCedula.trim().toUpperCase()
+      const existing = patientMemberships[key]
+      if (!existing) {
+        return { success: false, message: '', isUpgrade: false, error: 'No se encontró membresía para este titular.' }
+      }
+
+      const tierRanks: Record<MembershipTier, number> = { bronce: 1, plata: 2, oro: 3 }
+      const oldRank = tierRanks[existing.tier]
+      const newRank = tierRanks[newTier]
+      const isUpgrade = newRank > oldRank
+      const isDowngrade = newRank < oldRank
+
+      const newPlan = MEMBERSHIP_PLANS.find((p) => p.id === newTier)
+      const targetCycle = billingCycle || existing.billingCycle
+      const newPrice = targetCycle === 'anual' ? (newPlan?.priceAnnual || 140) : (newPlan?.priceMonthly || 14)
+      const priceDiff = Math.max(0, newPrice - existing.priceUsd)
+
+      const initialNew = getInitialBenefitsForTier(newTier)
+      const oldInitial = getInitialBenefitsForTier(existing.tier)
+
+      let updatedBenefits = { ...existing.benefitsRemaining }
+
+      if (isUpgrade) {
+        const genDelta = (typeof initialNew.general === 'number' && typeof oldInitial.general === 'number')
+          ? initialNew.general - oldInitial.general
+          : 0
+        const currentGen = typeof updatedBenefits.general === 'number' ? updatedBenefits.general : 0
+        updatedBenefits = {
+          general: newTier === 'oro' ? 'ilimitadas' : currentGen + genDelta,
+          specialist: updatedBenefits.specialist + (initialNew.specialist - oldInitial.specialist),
+          dental: updatedBenefits.dental + (initialNew.dental - oldInitial.dental),
+          lab: updatedBenefits.lab + (initialNew.lab - oldInitial.lab),
+          cardio: updatedBenefits.cardio + (initialNew.cardio - oldInitial.cardio),
+          aesthetic: updatedBenefits.aesthetic + (initialNew.aesthetic - oldInitial.aesthetic),
+        }
+      } else if (isDowngrade) {
+        // En downgrade: REGLA "pero no se devuelve el dinero", ajustamos el cupo
+        updatedBenefits = {
+          general: typeof initialNew.general === 'number' ? Math.min(typeof updatedBenefits.general === 'number' ? updatedBenefits.general : initialNew.general, initialNew.general) : 'ilimitadas',
+          specialist: Math.min(updatedBenefits.specialist, initialNew.specialist),
+          dental: Math.min(updatedBenefits.dental, initialNew.dental),
+          lab: Math.min(updatedBenefits.lab, initialNew.lab),
+          cardio: Math.min(updatedBenefits.cardio, initialNew.cardio),
+          aesthetic: Math.min(updatedBenefits.aesthetic, initialNew.aesthetic),
+        }
+      }
+
+      // Validar si el nuevo plan soporta el número de beneficiarios
+      const maxAllowed = (newPlan?.affiliatesCount || 1) - 1
+      let keptBeneficiaries = existing.beneficiaries || []
+      if (keptBeneficiaries.length > maxAllowed) {
+        keptBeneficiaries = keptBeneficiaries.slice(0, maxAllowed)
+      }
+
+      const historyItem: PlanChangeHistory = {
+        date: new Date().toISOString().split('T')[0],
+        fromTier: existing.tier,
+        toTier: newTier,
+        type: isUpgrade ? 'upgrade' : (isDowngrade ? 'downgrade' : 'renovacion'),
+        priceDifferenceUsd: priceDiff,
+        note: isUpgrade
+          ? `Upgrade exitoso a ${newPlan?.name}. Nueva cuota de consultas y beneficios activada.`
+          : `Cambio a ${newPlan?.name} procesado. Importante: Conforme a las políticas del programa, no aplica reembolso de dinero.`,
+      }
+
+      const updatedMembership: PatientMembership = {
+        ...existing,
+        tier: newTier,
+        billingCycle: targetCycle,
+        priceUsd: newPrice,
+        beneficiaries: keptBeneficiaries,
+        benefitsRemaining: updatedBenefits,
+        consultsRemaining: {
+          general: updatedBenefits.general,
+          specialist: updatedBenefits.specialist,
+        },
+        planHistory: [historyItem, ...(existing.planHistory || [])],
+      }
+
+      setPatientMemberships((prev) => {
+        const next = { ...prev, [key]: updatedMembership }
+        if (typeof window !== 'undefined') {
+          try {
+            localStorage.setItem('cmzenit_patient_memberships', JSON.stringify(next))
+          } catch (e) {
+            console.error('Error saving patient memberships to localStorage', e)
+          }
+        }
+        return next
+      })
+
+      const msg = isUpgrade
+        ? `¡Felicitaciones! Has subido al plan ${newPlan?.name}. Ya puedes disfrutar de mayor cobertura y descuentos.`
+        : `Tu plan ha sido cambiado a ${newPlan?.name}. Recuerda que de acuerdo a las políticas de afiliación, no se realizan devoluciones de dinero.`
+
+      return { success: true, message: msg, isUpgrade }
+    } catch (err: any) {
+      return { success: false, message: '', isUpgrade: false, error: err.message || 'Error al cambiar plan' }
+    }
+  }
+
+  const consumeMembershipBenefit = async (params: {
+    titularCedula: string
+    benefitType: 'general' | 'specialist' | 'dental' | 'lab' | 'cardio' | 'aesthetic' | 'descuento'
+    serviceName: string
+    category?: ClinicArea | 'laboratorio' | 'odontologia' | 'cardiologia'
+    consumedByName: string
+    consumedByCedula: string
+    isTitular: boolean
+    relationship?: string
+    doctorName?: string
+    discountPercent?: number
+    wasFullyCovered: boolean
+    costSavedUsd: number
+    notes?: string
+  }): Promise<{ success: boolean; error?: string }> => {
+    try {
+      const key = params.titularCedula.trim().toUpperCase()
+      const existing = patientMemberships[key]
+      if (!existing) {
+        return { success: false, error: 'Membresía no encontrada para este titular' }
+      }
+
+      const updatedBenefits = { ...existing.benefitsRemaining }
+      if (params.wasFullyCovered && params.benefitType !== 'descuento') {
+        const currentVal = updatedBenefits[params.benefitType]
+        if (typeof currentVal === 'number' && currentVal > 0) {
+          updatedBenefits[params.benefitType] = currentVal - 1
+        }
+      }
+
+      const usageItem: CoverageUsageItem = {
+        id: `cov-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+        date: new Date().toISOString().split('T')[0],
+        serviceName: params.serviceName,
+        category: params.category || 'salud',
+        consumedBy: {
+          name: params.consumedByName,
+          cedula: params.consumedByCedula,
+          isTitular: params.isTitular,
+          relationship: params.relationship,
+        },
+        doctorName: params.doctorName,
+        benefitType: params.benefitType,
+        discountPercent: params.discountPercent,
+        wasFullyCovered: params.wasFullyCovered,
+        costSavedUsd: params.costSavedUsd,
+        notes: params.notes,
+      }
+
+      const updatedMembership: PatientMembership = {
+        ...existing,
+        benefitsRemaining: updatedBenefits,
+        consultsRemaining: {
+          general: updatedBenefits.general,
+          specialist: updatedBenefits.specialist,
+        },
+        coverageHistory: [usageItem, ...(existing.coverageHistory || [])],
+      }
+
+      setPatientMemberships((prev) => {
+        const next = { ...prev, [key]: updatedMembership }
+        if (typeof window !== 'undefined') {
+          try {
+            localStorage.setItem('cmzenit_patient_memberships', JSON.stringify(next))
+          } catch (e) {
+            console.error('Error saving patient memberships to localStorage', e)
+          }
+        }
+        return next
+      })
+
+      return { success: true }
+    } catch (err: any) {
+      return { success: false, error: err.message || 'Error al registrar consumo de cobertura' }
+    }
+  }
+
+  const addBeneficiaryToMembership = async (
+    titularCedula: string,
+    beneficiary: { name: string; cedula: string; relationship: string; phone?: string }
+  ): Promise<{ success: boolean; error?: string }> => {
+    try {
+      const key = titularCedula.trim().toUpperCase()
+      const existing = patientMemberships[key]
+      if (!existing) return { success: false, error: 'Membresía no encontrada' }
+
+      const plan = MEMBERSHIP_PLANS.find((p) => p.id === existing.tier)
+      const maxBeneficiaries = (plan?.affiliatesCount || 1) - 1
+      if ((existing.beneficiaries || []).length >= maxBeneficiaries) {
+        return {
+          success: false,
+          error: `Tu plan ${plan?.name} permite un máximo de ${maxBeneficiaries} beneficiario(s). Realiza un upgrade a un plan superior para incluir más familiares.`,
+        }
+      }
+
+      const newBen: MembershipBeneficiary = {
+        id: `ben-${Date.now()}`,
+        name: beneficiary.name,
+        cedula: beneficiary.cedula.trim().toUpperCase(),
+        relationship: beneficiary.relationship,
+        phone: beneficiary.phone,
+        addedAt: new Date().toISOString().split('T')[0],
+      }
+
+      const updatedMembership: PatientMembership = {
+        ...existing,
+        beneficiaries: [...(existing.beneficiaries || []), newBen],
+      }
+
+      setPatientMemberships((prev) => {
+        const next = { ...prev, [key]: updatedMembership }
+        if (typeof window !== 'undefined') {
+          try {
+            localStorage.setItem('cmzenit_patient_memberships', JSON.stringify(next))
+          } catch (e) {
+            console.error('Error saving patient memberships to localStorage', e)
+          }
+        }
+        return next
+      })
+
+      return { success: true }
+    } catch (err: any) {
+      return { success: false, error: err.message || 'Error al agregar beneficiario' }
+    }
+  }
+
+  const removeBeneficiaryFromMembership = async (
+    titularCedula: string,
+    beneficiaryCedula: string
+  ): Promise<{ success: boolean; error?: string }> => {
+    try {
+      const key = titularCedula.trim().toUpperCase()
+      const existing = patientMemberships[key]
+      if (!existing) return { success: false, error: 'Membresía no encontrada' }
+
+      const updatedMembership: PatientMembership = {
+        ...existing,
+        beneficiaries: (existing.beneficiaries || []).filter(
+          (b) => b.cedula.trim().toUpperCase() !== beneficiaryCedula.trim().toUpperCase()
+        ),
+      }
+
+      setPatientMemberships((prev) => {
+        const next = { ...prev, [key]: updatedMembership }
+        if (typeof window !== 'undefined') {
+          try {
+            localStorage.setItem('cmzenit_patient_memberships', JSON.stringify(next))
+          } catch (e) {
+            console.error('Error saving patient memberships to localStorage', e)
+          }
+        }
+        return next
+      })
+
+      return { success: true }
+    } catch (err: any) {
+      return { success: false, error: err.message || 'Error al eliminar beneficiario' }
     }
   }
 
@@ -1811,6 +2540,13 @@ export function CMZenitProvider({ children }: { children: ReactNode }) {
         getPatientProfile,
         savePatientProfile,
         uploadMedicalAttachment,
+        patientMemberships,
+        getPatientMembership,
+        subscribeToMembership,
+        changeMembershipPlan,
+        consumeMembershipBenefit,
+        addBeneficiaryToMembership,
+        removeBeneficiaryFromMembership,
       }}
     >
       {children}

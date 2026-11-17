@@ -20,6 +20,7 @@ import {
   Building2,
 } from 'lucide-react'
 import { WhatsAppIcon, InstagramIcon } from '@/components/SocialIcons'
+import { getDoctorsForService } from '@/lib/specialtyMatching'
 
 // 6 Especialidades Médicas para el Carrusel Interactivo
 const SPECIALTY_SLIDES = [
@@ -157,12 +158,46 @@ export default function EspecialidadesPage() {
     if (!matchesSearch) return false
 
     if (selectedFilter === 'all') return true
-    if (selectedFilter === 'consulta') return s.name.toLowerCase().includes('consulta') || s.name.toLowerCase().includes('medicina')
-    if (selectedFilter === 'hospitalizacion') return s.name.toLowerCase().includes('hospitalizaci')
-    if (selectedFilter === 'oftalmologia') return s.name.toLowerCase().includes('oftalmo')
-    if (selectedFilter === 'ginecologia') return s.name.toLowerCase().includes('gineco')
-    if (selectedFilter === 'odontologia') return s.name.toLowerCase().includes('odonto')
-    if (selectedFilter === 'cardiologia') return s.name.toLowerCase().includes('cardio')
+    const n = s.name.toLowerCase()
+    if (selectedFilter === 'primaria') {
+      return (
+        n.includes('general') ||
+        n.includes('interna') ||
+        n.includes('pediatría') ||
+        n.includes('pediatria') ||
+        n.includes('gineco')
+      )
+    }
+    if (selectedFilter === 'cirugia') {
+      return (
+        n.includes('cirug') ||
+        n.includes('quirú') ||
+        n.includes('traumato') ||
+        n.includes('mano')
+      )
+    }
+    if (selectedFilter === 'pediatria') {
+      return n.includes('pediatr') || n.includes('infantil')
+    }
+    if (selectedFilter === 'dental') {
+      return n.includes('odonto') || n.includes('bucal') || n.includes('dental')
+    }
+    if (selectedFilter === 'urgencias') {
+      return (
+        n.includes('24') ||
+        n.includes('emergencia') ||
+        n.includes('urgencia') ||
+        n.includes('laboratorio') ||
+        n.includes('hospitaliz')
+      )
+    }
+    if (selectedFilter === 'especialidades') {
+      return (
+        !n.includes('24h') &&
+        !n.includes('laboratorio') &&
+        !n.includes('hospitalización')
+      )
+    }
 
     return true
   })
@@ -338,13 +373,13 @@ export default function EspecialidadesPage() {
           {/* Pestañas de Filtro Rápido */}
           <div className="flex items-center gap-1.5 overflow-x-auto w-full lg:w-auto pb-2 lg:pb-0 scrollbar-thin">
             {[
-              { id: 'all', label: 'Todas las Especialidades' },
-              { id: 'consulta', label: 'Consulta General' },
-              { id: 'hospitalizacion', label: 'Hospitalización 24/7' },
-              { id: 'oftalmologia', label: 'Oftalmología' },
-              { id: 'ginecologia', label: 'Ginecología' },
-              { id: 'odontologia', label: 'Odontología' },
-              { id: 'cardiologia', label: 'Cardiología' },
+              { id: 'all', label: `Todas (${medicalServices.length})` },
+              { id: 'primaria', label: 'Atención Primaria' },
+              { id: 'cirugia', label: 'Cirugías & Quirófano' },
+              { id: 'pediatria', label: 'Pediatría & Infantil' },
+              { id: 'dental', label: 'Salud Bucal & Odontología' },
+              { id: 'especialidades', label: 'Consultas Médicas' },
+              { id: 'urgencias', label: 'Urgencias 24h & Lab' },
             ].map((tab) => (
               <button
                 key={tab.id}
@@ -378,7 +413,7 @@ export default function EspecialidadesPage() {
       <section className="max-w-7xl mx-auto px-4 sm:px-6">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredServices.map((service) => {
-            const responsibleDoctor = doctors.find((d) => d.area === 'salud')
+            const matchingDocs = getDoctorsForService(service, doctors)
 
             return (
               <div
@@ -393,7 +428,7 @@ export default function EspecialidadesPage() {
                     {/* INFORMATIVO SANITARIO EN LUGAR DE LOS MINUTOS */}
                     <div className="flex items-center gap-1.5 text-xs text-[#02B2C6] font-semibold bg-cyan-50 dark:bg-cyan-950/60 px-2.5 py-1 rounded-full">
                       <ShieldCheck className="w-3.5 h-3.5 text-[#02B2C6]" />
-                      <span>Especialidad MPPS</span>
+                      <span>{service.promo_tag || 'Especialidad MPPS'}</span>
                     </div>
                   </div>
 
@@ -406,10 +441,15 @@ export default function EspecialidadesPage() {
                     </p>
                   </div>
 
-                  {responsibleDoctor && (
-                    <div className="pt-2 flex items-center gap-2 text-[11px] text-[#777777]">
-                      <Award className="w-3.5 h-3.5 text-[#02B2C6]" />
-                      <span>Especialista colegiado disponible</span>
+                  {matchingDocs.length > 0 ? (
+                    <div className="pt-2 flex items-center gap-2 text-[11px] text-emerald-600 dark:text-emerald-400 font-medium">
+                      <Award className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
+                      <span>Especialista disponible ({matchingDocs[0].name})</span>
+                    </div>
+                  ) : (
+                    <div className="pt-2 flex items-center gap-2 text-[11px] text-amber-600 dark:text-amber-400 font-medium">
+                      <ShieldCheck className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+                      <span>Asignación de especialista por secretaría</span>
                     </div>
                   )}
                 </div>

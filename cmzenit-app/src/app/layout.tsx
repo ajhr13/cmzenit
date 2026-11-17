@@ -34,8 +34,11 @@ export default function RootLayout({
     <html
       lang="es"
       className={`${readexPro.variable} h-full antialiased overflow-x-hidden`}
+    
+      suppressHydrationWarning
     >
-      <body className="min-h-full flex flex-col font-sans bg-white text-[#777777] overflow-x-hidden w-full max-w-full">
+      <body
+        suppressHydrationWarning className="min-h-full flex flex-col font-sans bg-white text-[#777777] overflow-x-hidden w-full max-w-full">
         <Providers>{children}</Providers>
       </body>
     </html>

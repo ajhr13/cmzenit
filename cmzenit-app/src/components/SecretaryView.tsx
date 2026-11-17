@@ -5,6 +5,7 @@ import { useSearchParams, useRouter } from 'next/navigation'
 import { useCMZenit } from '@/context/CMZenitContext'
 import { Appointment, ClinicArea, AppointmentStatus, PaymentMethod } from '@/types/database.types'
 import { getDoctorsForService } from '@/lib/specialtyMatching'
+import { MEMBERSHIP_PLANS } from '@/lib/membershipsData'
 import {
   Clock,
   Phone,
@@ -33,6 +34,10 @@ import {
   Sparkles,
   ChevronRight,
   ArrowRight,
+  Award,
+  TrendingUp,
+  History,
+  ShieldCheck,
   Plus,
 } from 'lucide-react'
 
@@ -49,15 +54,22 @@ export function SecretaryView() {
     bookAppointment,
     validateAndConfirmAppointment,
     dismissUnconfirmedAppointment,
+    getPatientMembership,
+    consumeMembershipBenefit,
+    patientMemberships,
   } = useCMZenit()
 
   const router = useRouter()
   const searchParams = useSearchParams()
-  const tabParam = searchParams?.get('tab') as 'espera' | 'caja' | 'avisos' | 'nueva-cita' | null
-  const [activeTab, setActiveTab] = useState<'espera' | 'caja' | 'avisos' | 'nueva-cita'>('espera')
+  const tabParam = searchParams?.get('tab') as 'espera' | 'caja' | 'avisos' | 'nueva-cita' | 'afiliados' | null
+  const [activeTab, setActiveTab] = useState<'espera' | 'caja' | 'avisos' | 'nueva-cita' | 'afiliados'>('espera')
 
   // Sub-menú especializado de Recepción & Admisión
   const [admissionTab, setAdmissionTab] = useState<'checkin' | 'validacion' | 'sala' | 'sin-cita' | 'agenda'>('checkin')
+
+  // Búsqueda en módulo de Afiliados
+  const [affiliateSearch, setAffiliateSearch] = useState('')
+  const [selectedAffiliateHistory, setSelectedAffiliateHistory] = useState<string | null>(null)
 
   // Búsqueda en vivo de Admisión Rápida (Check-In Express)
   const [quickAdmissionSearch, setQuickAdmissionSearch] = useState('')
@@ -134,7 +146,7 @@ export function SecretaryView() {
   const [admissionPassApt, setAdmissionPassApt] = useState<Appointment | null>(null)
 
   useEffect(() => {
-    if (tabParam && ['espera', 'caja', 'avisos', 'nueva-cita'].includes(tabParam)) {
+    if (tabParam && ['espera', 'caja', 'avisos', 'nueva-cita', 'afiliados'].includes(tabParam)) {
       setActiveTab(tabParam)
       if (tabParam === 'nueva-cita') {
         setAdmissionTab('sin-cita')
@@ -1753,6 +1765,198 @@ export function SecretaryView() {
       </section>
       )}
 
+      {/* SECCIÓN RECEPCIÓN: GESTIÓN DE AFILIADOS Y MEMBRESÍAS */}
+      {activeTab === 'afiliados' && (
+        <section className="space-y-6 animate-in fade-in duration-300">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-zinc-200 dark:border-zinc-800">
+            <div>
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-cyan-50 dark:bg-cyan-950/40 text-[#02B2C6] text-xs font-bold uppercase tracking-wider mb-1">
+                <Award className="w-3.5 h-3.5" />
+                <span>Recepción • Afiliados & Membresías Zenit Vital</span>
+              </div>
+              <h2 className="text-xl sm:text-2xl font-black tracking-tight text-zinc-900 dark:text-zinc-100">
+                Padrón de Afiliados & Beneficiarios
+              </h2>
+              <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                Consulta de saldos de cobertura, comprobación de beneficiarios anclados y registro de atenciones
+              </p>
+            </div>
+
+            {/* Buscador de Afiliados */}
+            <div className="relative w-full sm:w-80">
+              <Search className="w-4 h-4 text-zinc-400 absolute left-3.5 top-3" />
+              <input
+                type="text"
+                placeholder="Buscar por cédula o nombre..."
+                value={affiliateSearch}
+                onChange={(e) => setAffiliateSearch(e.target.value)}
+                className="w-full pl-10 pr-4 py-2 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-xs focus:outline-none focus:ring-2 focus:ring-[#02B2C6]"
+              />
+            </div>
+          </div>
+
+          {/* Tarjetas de Afiliados Registrados */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {Object.values(patientMemberships)
+              .filter((m) => {
+                if (!affiliateSearch.trim()) return true
+                const q = affiliateSearch.toLowerCase()
+                const matchTitular = m.patientName.toLowerCase().includes(q) || m.patientCedula.toLowerCase().includes(q)
+                const matchBen = (m.beneficiaries || []).some(
+                  (b) => b.name.toLowerCase().includes(q) || b.cedula.toLowerCase().includes(q)
+                )
+                return matchTitular || matchBen
+              })
+              .map((mem) => {
+                const plan = MEMBERSHIP_PLANS.find((p) => p.id === mem.tier)
+                const isSelectedHistory = selectedAffiliateHistory === mem.patientCedula
+
+                return (
+                  <div
+                    key={mem.id}
+                    className="p-6 rounded-3xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-sm space-y-4 hover:shadow-md transition"
+                  >
+                    {/* Header de la Membresía */}
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex items-center gap-3">
+                        <div
+                          className="w-10 h-10 rounded-2xl flex items-center justify-center font-bold text-white shadow-sm"
+                          style={{ backgroundColor: plan?.color || '#02B2C6' }}
+                        >
+                          <Award className="w-5 h-5" />
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs font-black uppercase text-zinc-900 dark:text-zinc-100">
+                              {mem.patientName}
+                            </span>
+                            <span
+                              className="text-[9px] px-2 py-0.5 rounded-full text-white font-extrabold uppercase"
+                              style={{ backgroundColor: plan?.color || '#02B2C6' }}
+                            >
+                              Plan {mem.tier.toUpperCase()}
+                            </span>
+                          </div>
+                          <span className="text-xs text-zinc-500 font-mono">
+                            C.I: {mem.patientCedula} • Tel: {mem.patientPhone}
+                          </span>
+                        </div>
+                      </div>
+
+                      <span className="text-[10px] px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-800 font-bold uppercase">
+                        Vigente hasta {mem.expiryDate}
+                      </span>
+                    </div>
+
+                    {/* Medidores de Cobertura */}
+                    <div className="grid grid-cols-3 sm:grid-cols-6 gap-2 text-center text-xs">
+                      <div className="p-2 rounded-xl bg-slate-50 dark:bg-zinc-800">
+                        <span className="text-[9px] font-bold text-zinc-400 block uppercase">General</span>
+                        <strong className="text-sm font-black text-zinc-900 dark:text-zinc-100">
+                          {mem.benefitsRemaining.general}
+                        </strong>
+                      </div>
+                      <div className="p-2 rounded-xl bg-slate-50 dark:bg-zinc-800">
+                        <span className="text-[9px] font-bold text-zinc-400 block uppercase">Especialista</span>
+                        <strong className="text-sm font-black text-emerald-600">
+                          {mem.benefitsRemaining.specialist}
+                        </strong>
+                      </div>
+                      <div className="p-2 rounded-xl bg-slate-50 dark:bg-zinc-800">
+                        <span className="text-[9px] font-bold text-zinc-400 block uppercase">Dental</span>
+                        <strong className="text-sm font-black text-cyan-600">
+                          {mem.benefitsRemaining.dental}
+                        </strong>
+                      </div>
+                      <div className="p-2 rounded-xl bg-slate-50 dark:bg-zinc-800">
+                        <span className="text-[9px] font-bold text-zinc-400 block uppercase">Lab 24h</span>
+                        <strong className="text-sm font-black text-purple-600">
+                          {mem.benefitsRemaining.lab}
+                        </strong>
+                      </div>
+                      <div className="p-2 rounded-xl bg-slate-50 dark:bg-zinc-800">
+                        <span className="text-[9px] font-bold text-zinc-400 block uppercase">Cardio</span>
+                        <strong className="text-sm font-black text-rose-600">
+                          {mem.benefitsRemaining.cardio}
+                        </strong>
+                      </div>
+                      <div className="p-2 rounded-xl bg-slate-50 dark:bg-zinc-800">
+                        <span className="text-[9px] font-bold text-zinc-400 block uppercase">Estética</span>
+                        <strong className="text-sm font-black text-pink-600">
+                          {mem.benefitsRemaining.aesthetic}
+                        </strong>
+                      </div>
+                    </div>
+
+                    {/* Beneficiarios Anclados */}
+                    {mem.beneficiaries && mem.beneficiaries.length > 0 && (
+                      <div className="pt-2 border-t border-zinc-100 dark:border-zinc-800 space-y-1.5">
+                        <span className="text-[10px] font-extrabold uppercase text-zinc-500 tracking-wider block">
+                          Beneficiarios Anclados ({mem.beneficiaries.length}):
+                        </span>
+                        <div className="flex flex-wrap gap-1.5">
+                          {mem.beneficiaries.map((b, i) => (
+                            <span
+                              key={i}
+                              className="text-[11px] bg-cyan-50 dark:bg-cyan-950/40 text-cyan-800 dark:text-cyan-300 px-2.5 py-1 rounded-lg border border-cyan-200/50"
+                            >
+                              {b.name} ({b.cedula} - {b.relationship})
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Botones de Acción */}
+                    <div className="pt-2 border-t border-zinc-100 dark:border-zinc-800 flex items-center justify-between text-xs">
+                      <button
+                        onClick={() => setSelectedAffiliateHistory(isSelectedHistory ? null : mem.patientCedula)}
+                        className="text-[#02B2C6] font-bold hover:underline flex items-center gap-1 cursor-pointer"
+                      >
+                        <History className="w-3.5 h-3.5" />
+                        <span>{isSelectedHistory ? 'Ocultar Historial' : `Ver Historial de Uso (${mem.coverageHistory?.length || 0})`}</span>
+                      </button>
+
+                      <span className="text-[11px] text-zinc-400">
+                        Descuentos: {plan?.specialistDiscountPercent}% Esp. • {plan?.labDiscountPercent}% Lab
+                      </span>
+                    </div>
+
+                    {/* Vista Desplegable de Historial */}
+                    {isSelectedHistory && (
+                      <div className="pt-3 border-t border-zinc-100 dark:border-zinc-800 space-y-2 animate-in fade-in">
+                        <span className="text-[10px] font-black uppercase text-zinc-400">Registro de Consumos:</span>
+                        {(!mem.coverageHistory || mem.coverageHistory.length === 0) ? (
+                          <p className="text-xs text-zinc-400">No hay atenciones registradas aún.</p>
+                        ) : (
+                          <div className="space-y-1.5 max-h-48 overflow-y-auto text-xs">
+                            {mem.coverageHistory.map((item) => (
+                              <div
+                                key={item.id}
+                                className="p-2 rounded-xl bg-slate-50 dark:bg-zinc-800 text-[11px] flex items-center justify-between"
+                              >
+                                <div>
+                                  <span className="font-bold text-zinc-800 dark:text-zinc-200">{item.serviceName}</span>
+                                  <span className="text-zinc-500 block text-[10px]">
+                                    {item.consumedBy.name} ({item.consumedBy.isTitular ? 'Titular' : item.consumedBy.relationship}) • {item.date}
+                                  </span>
+                                </div>
+                                <span className="font-bold text-emerald-600">
+                                  {item.wasFullyCovered ? '100% Cubierto' : `-${item.discountPercent}%`} (+${item.costSavedUsd})
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )
+              })}
+          </div>
+        </section>
+      )}
+
       {/* MODAL DE COBRO EN CAJA / REGISTRO DE PAGO */}
       {isPayModalOpen && selectedPayAppointment && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in">
@@ -1782,6 +1986,67 @@ export function SecretaryView() {
             </div>
 
             <form onSubmit={handleConfirmPayment} className="space-y-4">
+              {/* ALERTA DE MEMBRESÍA & BENEFICIOS PARA RECEPCIÓN */}
+              {(() => {
+                const mem = getPatientMembership(selectedPayAppointment.patient_cedula)
+                if (!mem) return null
+                const plan = MEMBERSHIP_PLANS.find((p) => p.id === mem.tier)
+                const srv = services.find((s) => s.id === selectedPayAppointment.service_id)
+                const originalPrice = srv?.price || 40
+                const isGeneral = srv?.name?.toLowerCase().includes('general') || srv?.name?.toLowerCase().includes('interna')
+                const quotaRemaining = isGeneral ? mem.benefitsRemaining.general : mem.benefitsRemaining.specialist
+                const canExonerate = quotaRemaining === 'ilimitadas' || (typeof quotaRemaining === 'number' && quotaRemaining > 0)
+                const discountPercent = plan?.specialistDiscountPercent || 20
+
+                return (
+                  <div className="p-3.5 rounded-2xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Award className="w-4 h-4 text-amber-600" />
+                        <span className="text-xs font-black uppercase tracking-wider text-amber-900 dark:text-amber-200">
+                          Afiliado Plan {mem.tier.toUpperCase()} {mem.isBeneficiary ? `(Beneficiario de ${mem.titularName})` : '(Titular)'}
+                        </span>
+                      </div>
+                      <span className="text-[10px] font-bold text-amber-700 bg-amber-100 dark:bg-amber-900 px-2 py-0.5 rounded-full">
+                        {canExonerate ? 'Cupo 100% Disponible' : 'Cupo agotado - Aplica Desc.'}
+                      </span>
+                    </div>
+
+                    <p className="text-[11px] text-amber-800 dark:text-amber-300">
+                      Cupos disponibles: <strong>General: {mem.benefitsRemaining.general}</strong> • <strong>Especialista: {mem.benefitsRemaining.specialist}</strong> • Descuento arancel: <strong>{discountPercent}%</strong>
+                    </p>
+
+                    <div className="flex flex-wrap items-center gap-2 pt-1">
+                      {canExonerate && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setPayAmountUsd(0)
+                            setPayMethod('efectivo_usd')
+                            setPayReference(`MEMBRESIA-${mem.tier.toUpperCase()}`)
+                          }}
+                          className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-black uppercase tracking-wider shadow-sm transition active:scale-95 cursor-pointer"
+                        >
+                          ✓ Exonerar 100% con Cupo del Plan
+                        </button>
+                      )}
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const discounted = Math.round(originalPrice * (1 - discountPercent / 100))
+                          setPayAmountUsd(discounted)
+                          setPayReference(`DESC-${discountPercent}PCT-${mem.tier.toUpperCase()}`)
+                        }}
+                        className="px-3 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-white text-[11px] font-bold transition active:scale-95 cursor-pointer"
+                      >
+                        Aplicar Descuento de Membresía (-{discountPercent}%)
+                      </button>
+                    </div>
+                  </div>
+                )
+              })()}
+
               {/* Tarjeta de Cálculo de Montos */}
               <div className="p-4 bg-emerald-50/70 dark:bg-emerald-950/40 rounded-2xl border border-emerald-200 dark:border-emerald-800 flex items-center justify-between">
                 <div>

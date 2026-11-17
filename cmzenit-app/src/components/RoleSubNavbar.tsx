@@ -19,6 +19,7 @@ import {
   UserCheck,
   Layers,
   User,
+  Award,
 } from 'lucide-react'
 
 export function RoleSubNavbarContent() {
@@ -72,6 +73,12 @@ export function RoleSubNavbarContent() {
           label: 'Mi Perfil',
           href: '/pacientes?tab=perfil',
           icon: User,
+        },
+        {
+          id: 'membresia',
+          label: 'Mi Membresía & Cobertura',
+          href: '/pacientes?tab=membresia',
+          icon: Award,
         },
         {
           id: 'catalogo',
@@ -139,6 +146,12 @@ export function RoleSubNavbarContent() {
           badgeColor: 'bg-slate-200 text-[#525862]',
         },
         { id: 'avisos', label: 'Avisos WhatsApp', href: '/recepcion?tab=avisos', icon: MessageSquare },
+        {
+          id: 'afiliados',
+          label: 'Membresías & Afiliados',
+          href: '/recepcion?tab=afiliados',
+          icon: Award,
+        },
         {
           id: 'nueva-cita',
           label: 'Nueva Cita Presencial',

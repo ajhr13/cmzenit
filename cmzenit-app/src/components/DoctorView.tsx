@@ -33,6 +33,7 @@ import {
   Thermometer,
   Weight,
   Paperclip,
+  Award,
   UploadCloud,
   AlertTriangle,
   Eye,
@@ -69,6 +70,7 @@ export function DoctorView() {
     updatePatientAllergies,
     uploadMedicalAttachment,
     getPatientProfile,
+    getPatientMembership,
   } = useCMZenit()
 
   // Si el usuario autenticado es doctor, asociarlo directamente a su perfil médico
@@ -334,6 +336,12 @@ export function DoctorView() {
 
     return null
   }, [selectedPatientCedula, selectedAppointmentId, allPatients, doctorAppointments])
+
+  // Membresía activa del paciente seleccionado (titular o beneficiario anclado)
+  const activePatientMembership = useMemo(() => {
+    if (!activePatient?.cedula) return null
+    return getPatientMembership(activePatient.cedula)
+  }, [activePatient?.cedula, getPatientMembership])
 
   // Perfil clínico completo del paciente activo (cédula, patologías, peso, altura, etc.)
   const activePatientProfile = useMemo(() => {
@@ -985,6 +993,41 @@ export function DoctorView() {
                     </div>
                   )
                 })()}
+
+                {/* AFILIACIÓN / MEMBRESÍA ZENIT VITAL */}
+                {activePatientMembership && (
+                  <div className="p-3.5 rounded-2xl border border-amber-300/80 dark:border-amber-900/60 bg-amber-50/50 dark:bg-amber-950/20 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-sm">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-xl bg-amber-500 text-white flex items-center justify-center font-bold shrink-0 shadow-sm">
+                        <Award className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-[10px] font-black uppercase tracking-wider text-amber-800 dark:text-amber-300">
+                            Programa de Afiliados Zenit Vital
+                          </span>
+                          <span className="text-[9px] px-2 py-0.5 rounded-full bg-amber-400 text-slate-900 font-black uppercase">
+                            Plan {activePatientMembership.tier.toUpperCase()}
+                          </span>
+                        </div>
+                        <p className="text-xs font-bold text-zinc-900 dark:text-zinc-100">
+                          {activePatientMembership.isBeneficiary ? (
+                            <span>Beneficiario Anclado (Titular: {activePatientMembership.titularName})</span>
+                          ) : (
+                            <span>Titular del Plan • Vigente hasta {activePatientMembership.expiryDate}</span>
+                          )}
+                        </p>
+                        <p className="text-[11px] text-zinc-500">
+                          Cupos Restantes: General: {activePatientMembership.benefitsRemaining.general} • Especialista: {activePatientMembership.benefitsRemaining.specialist} • Lab: {activePatientMembership.benefitsRemaining.lab} • Cardio: {activePatientMembership.benefitsRemaining.cardio}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="text-[11px] font-bold text-amber-700 dark:text-amber-400 bg-white/80 dark:bg-zinc-900/80 px-3 py-1.5 rounded-xl border border-amber-200 dark:border-amber-800/50 self-start sm:self-auto">
+                      ✓ Cobertura Médica Verificada
+                    </div>
+                  </div>
+                )}
 
                 {/* ANTECEDENTES Y PERFIL CLÍNICO DEL PACIENTE */}
                 {activePatientProfile && (

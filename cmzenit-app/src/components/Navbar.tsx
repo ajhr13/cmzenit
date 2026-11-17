@@ -181,6 +181,16 @@ export function Navbar() {
               Espacio Estética
             </Link>
             <Link
+              href="/afiliados"
+              className={`px-4 py-2.5 rounded-md transition ${
+                pathname === '/afiliados'
+                  ? 'bg-[#02B2C6] text-white shadow-sm font-bold'
+                  : 'text-[#777777] hover:text-[#02B2C6]'
+              }`}
+            >
+              Afiliados
+            </Link>
+            <Link
               href="/cuerpo-medico"
               className={`px-4 py-2.5 rounded-md transition ${
                 pathname === '/cuerpo-medico'
@@ -326,6 +336,15 @@ export function Navbar() {
               }`}
             >
               Espacio Estética
+            </Link>
+            <Link
+              href="/afiliados"
+              onClick={() => setIsMobileMenuOpen(false)}
+              className={`block px-3 py-2 rounded-md text-xs font-semibold uppercase ${
+                pathname === '/afiliados' ? 'bg-[#02B2C6] text-white' : 'text-[#777777] hover:bg-slate-50'
+              }`}
+            >
+              Afiliados
             </Link>
             <Link
               href="/cuerpo-medico"

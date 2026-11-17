@@ -3,7 +3,8 @@
 import React, { useState, useEffect, useMemo } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { useCMZenit } from '@/context/CMZenitContext'
-import { Service, ClinicArea, MedicalRecord, PatientClinicalProfile } from '@/types/database.types'
+import { Service, ClinicArea, MedicalRecord, PatientClinicalProfile, MembershipTier, MembershipBeneficiary } from '@/types/database.types'
+import { MEMBERSHIP_PLANS } from '@/lib/membershipsData'
 import { getDoctorsForService } from '@/lib/specialtyMatching'
 import { RecipeModal } from '@/components/RecipeModal'
 import { ImageLightboxModal } from '@/components/ImageLightboxModal'
@@ -29,6 +30,18 @@ import {
   AlertCircle,
   Heart,
   Plus,
+  Award,
+  Users,
+  ArrowUpRight,
+  CreditCard,
+  History,
+  TrendingUp,
+  UserPlus,
+  Trash2,
+  QrCode,
+  Smile,
+  FlaskConical,
+  HeartPulse,
 } from 'lucide-react'
 
 export function PatientView() {
@@ -42,15 +55,20 @@ export function PatientView() {
     requestCancellation,
     getPatientProfile,
     savePatientProfile,
+    getPatientMembership,
+    changeMembershipPlan,
+    addBeneficiaryToMembership,
+    removeBeneficiaryFromMembership,
+    exchangeRate,
   } = useCMZenit()
 
   const router = useRouter()
   const searchParams = useSearchParams()
-  const tabParam = searchParams?.get('tab') as 'citas' | 'recipes' | 'perfil' | 'catalogo' | 'agendar' | null
-  const [activeTab, setActiveTab] = useState<'citas' | 'recipes' | 'perfil' | 'catalogo' | 'agendar'>('citas')
+  const tabParam = searchParams?.get('tab') as 'citas' | 'recipes' | 'perfil' | 'membresia' | 'catalogo' | 'agendar' | null
+  const [activeTab, setActiveTab] = useState<'citas' | 'recipes' | 'perfil' | 'membresia' | 'catalogo' | 'agendar'>('citas')
 
   useEffect(() => {
-    if (tabParam && ['citas', 'recipes', 'perfil', 'catalogo', 'agendar'].includes(tabParam)) {
+    if (tabParam && ['citas', 'recipes', 'perfil', 'membresia', 'catalogo', 'agendar'].includes(tabParam)) {
       setActiveTab(tabParam)
       if (tabParam === 'agendar') {
         setIsBookingOpen(true)
@@ -58,7 +76,7 @@ export function PatientView() {
     }
   }, [tabParam])
 
-  const handleTabChange = (newTab: 'citas' | 'recipes' | 'perfil' | 'catalogo' | 'agendar') => {
+  const handleTabChange = (newTab: 'citas' | 'recipes' | 'perfil' | 'membresia' | 'catalogo' | 'agendar') => {
     setActiveTab(newTab)
     router.replace(`/pacientes?tab=${newTab}`, { scroll: false })
   }
@@ -66,6 +84,77 @@ export function PatientView() {
   // Estados de catálogo y filtros
   const [searchTerm, setSearchTerm] = useState('')
   const [filterArea, setFilterArea] = useState<ClinicArea | 'all'>('all')
+
+  // Estados de Membresía y Cobertura
+  const patientMembership = getPatientMembership(currentUser?.cedula)
+  const currentPlan = MEMBERSHIP_PLANS.find((p) => p.id === patientMembership?.tier)
+  const [isChangePlanOpen, setIsChangePlanOpen] = useState(false)
+  const [selectedNewTier, setSelectedNewTier] = useState<MembershipTier>('oro')
+  const [changePlanCycle, setChangePlanCycle] = useState<'anual' | 'mensual'>('anual')
+  const [changePlanSubmitting, setChangePlanSubmitting] = useState(false)
+  const [changePlanFeedback, setChangePlanFeedback] = useState('')
+
+  const [isAddBenModalOpen, setIsAddBenModalOpen] = useState(false)
+  const [newBenName, setNewBenName] = useState('')
+  const [newBenCedula, setNewBenCedula] = useState('')
+  const [newBenRel, setNewBenRel] = useState('Cónyuge / Pareja')
+  const [newBenPhone, setNewBenPhone] = useState('')
+  const [addBenSubmitting, setAddBenSubmitting] = useState(false)
+  const [addBenError, setAddBenError] = useState('')
+
+  const handleChangePlanSubmit = async () => {
+    if (!patientMembership) return
+    setChangePlanSubmitting(true)
+    setChangePlanFeedback('')
+    const res = await changeMembershipPlan(
+      patientMembership.titularCedula,
+      selectedNewTier,
+      changePlanCycle
+    )
+    setChangePlanSubmitting(false)
+    setChangePlanFeedback(res.message || res.error || '')
+    if (res.success) {
+      setTimeout(() => {
+        setIsChangePlanOpen(false)
+        setChangePlanFeedback('')
+      }, 2500)
+    }
+  }
+
+  const handleAddBeneficiarySubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!patientMembership) return
+    if (!newBenName.trim() || !newBenCedula.trim()) {
+      setAddBenError('Por favor ingresa nombre y cédula del beneficiario.')
+      return
+    }
+
+    setAddBenSubmitting(true)
+    setAddBenError('')
+    const res = await addBeneficiaryToMembership(patientMembership.titularCedula, {
+      name: newBenName.trim(),
+      cedula: newBenCedula.trim(),
+      relationship: newBenRel,
+      phone: newBenPhone.trim(),
+    })
+    setAddBenSubmitting(false)
+
+    if (res.success) {
+      setNewBenName('')
+      setNewBenCedula('')
+      setNewBenPhone('')
+      setIsAddBenModalOpen(false)
+    } else {
+      setAddBenError(res.error || 'Error al agregar beneficiario.')
+    }
+  }
+
+  const handleRemoveBeneficiary = async (benCedula: string) => {
+    if (!patientMembership) return
+    if (confirm('¿Estás seguro de desvincular a este beneficiario de tu membresía?')) {
+      await removeBeneficiaryFromMembership(patientMembership.titularCedula, benCedula)
+    }
+  }
 
   // Modal Agendamiento
   const [isBookingOpen, setIsBookingOpen] = useState(false)
@@ -1122,6 +1211,669 @@ export function PatientView() {
           </div>
         </form>
       </section>
+      )}
+
+      {/* SECCIÓN "MI MEMBRESÍA & COBERTURA" */}
+      {activeTab === 'membresia' && (
+        <section className="space-y-8 animate-in fade-in duration-300">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-zinc-200 dark:border-zinc-800">
+            <div>
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-cyan-50 dark:bg-cyan-950/40 text-[#02B2C6] text-xs font-bold uppercase tracking-wider mb-1">
+                <Award className="w-3.5 h-3.5" />
+                <span>Programa de Salud Zenit Vital</span>
+              </div>
+              <h2 className="text-xl sm:text-2xl font-black tracking-tight text-zinc-900 dark:text-zinc-100">
+                Mi Membresía & Coberturas Clínicas
+              </h2>
+              <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                Estado de tu plan, cupos de consultas restantes, beneficiarios anclados e historial de coberturas
+              </p>
+            </div>
+
+            {patientMembership && !patientMembership.isBeneficiary && (
+              <button
+                onClick={() => {
+                  setSelectedNewTier(patientMembership.tier === 'oro' ? 'plata' : 'oro')
+                  setIsChangePlanOpen(true)
+                }}
+                className="px-4 py-2.5 rounded-xl bg-[#02B2C6] hover:bg-[#029baa] text-white text-xs font-bold uppercase tracking-wider shadow-sm transition active:scale-95 flex items-center gap-2 cursor-pointer self-start sm:self-auto"
+              >
+                <TrendingUp className="w-4 h-4" />
+                <span>Subir / Cambiar Plan</span>
+              </button>
+            )}
+          </div>
+
+          {!patientMembership ? (
+            /* Caso sin membresía activa */
+            <div className="bg-gradient-to-br from-cyan-50/50 via-white to-slate-50 dark:from-zinc-900 dark:to-zinc-900 border-2 border-dashed border-[#02B2C6]/40 rounded-3xl p-8 sm:p-12 text-center space-y-4 shadow-sm">
+              <div className="w-16 h-16 rounded-2xl bg-[#02B2C6]/10 text-[#02B2C6] flex items-center justify-center mx-auto">
+                <Award className="w-8 h-8" />
+              </div>
+              <div className="max-w-md mx-auto space-y-1">
+                <h3 className="text-lg font-black text-zinc-900 dark:text-zinc-100">
+                  Aún no estás afiliado a un Plan Zenit Vital
+                </h3>
+                <p className="text-xs text-zinc-600 dark:text-zinc-400 leading-relaxed">
+                  Afíliate a nuestros planes <strong>Bronce</strong>, <strong>Plata</strong> u <strong>Oro</strong> para disfrutar de consultas 100% incluidas, descuentos permanentes en las 31 especialidades, laboratorio 24h y atención prioritaria en Sebucán.
+                </p>
+              </div>
+              <button
+                onClick={() => router.push('/afiliados')}
+                className="px-6 py-3 rounded-xl bg-[#02B2C6] hover:bg-[#029baa] text-white text-xs font-black uppercase tracking-wider shadow-md transition active:scale-95 cursor-pointer"
+              >
+                Ver Planes de Afiliados
+              </button>
+            </div>
+          ) : (
+            /* Caso con membresía activa */
+            <div className="space-y-8">
+              {/* 1. Carnet Digital Zenit */}
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div
+                  className="lg:col-span-2 relative rounded-3xl p-6 sm:p-8 text-white shadow-xl overflow-hidden flex flex-col justify-between min-h-[220px]"
+                  style={{
+                    background:
+                      patientMembership.tier === 'oro'
+                        ? 'linear-gradient(135deg, #B8860B 0%, #D4AF37 50%, #8B6508 100%)'
+                        : patientMembership.tier === 'plata'
+                        ? 'linear-gradient(135deg, #525862 0%, #02B2C6 100%)'
+                        : 'linear-gradient(135deg, #7A4928 0%, #CD7F32 100%)',
+                  }}
+                >
+                  <div className="absolute top-0 right-0 -mr-8 -mt-8 w-40 h-40 bg-white/10 rounded-full blur-2xl pointer-events-none" />
+
+                  {/* Header Carnet */}
+                  <div className="flex items-start justify-between gap-4 relative z-10">
+                    <div className="flex items-center gap-3">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src="/logo-zenit.png"
+                        alt="Zenit"
+                        className="w-12 h-12 rounded-full bg-white p-1 shadow-md object-contain"
+                      />
+                      <div>
+                        <div className="text-[10px] font-bold uppercase tracking-widest text-white/90">
+                          Grupo Médico Zenit • Carnet Digital
+                        </div>
+                        <div className="text-xl sm:text-2xl font-black uppercase tracking-tight">
+                          Plan {patientMembership.tier.toUpperCase()} VITAL
+                        </div>
+                      </div>
+                    </div>
+
+                    <span className="px-3 py-1 rounded-full bg-white/20 backdrop-blur-md text-[10px] font-black uppercase tracking-wider border border-white/30">
+                      {patientMembership.status === 'activa' ? '● Cobertura Activa' : '● ' + patientMembership.status}
+                    </span>
+                  </div>
+
+                  {/* Body Carnet */}
+                  <div className="pt-6 grid grid-cols-1 sm:grid-cols-2 gap-4 relative z-10 text-xs">
+                    <div>
+                      <span className="text-[10px] uppercase font-bold text-white/70 block">
+                        {patientMembership.isBeneficiary ? 'Beneficiario Anclado' : 'Titular de la Membresía'}
+                      </span>
+                      <strong className="text-base sm:text-lg font-black block">
+                        {patientMembership.isBeneficiary
+                          ? patientMembership.beneficiaryData?.name || currentUser?.name
+                          : patientMembership.patientName}
+                      </strong>
+                      <span className="text-[11px] text-white/90 font-mono">
+                        C.I: {patientMembership.isBeneficiary
+                          ? patientMembership.beneficiaryData?.cedula || currentUser?.cedula
+                          : patientMembership.patientCedula}
+                      </span>
+                      {patientMembership.isBeneficiary && (
+                        <div className="mt-1 text-[10px] bg-white/20 inline-block px-2 py-0.5 rounded font-bold">
+                          Anclado a Titular: {patientMembership.titularName} ({patientMembership.beneficiaryData?.relationship})
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="sm:text-right space-y-1">
+                      <span className="text-[10px] uppercase font-bold text-white/70 block">
+                        Vigencia de Cobertura
+                      </span>
+                      <strong className="text-sm font-bold block">
+                        Hasta: {patientMembership.expiryDate}
+                      </strong>
+                      <span className="text-[10px] text-white/80 block">
+                        Ciclo: {patientMembership.billingCycle === 'anual' ? 'Anual (12 Meses)' : 'Mensual'} • Sede Sebucán
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Resumen rápido de descuentos */}
+                <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-3xl p-6 shadow-sm flex flex-col justify-between">
+                  <div className="space-y-3">
+                    <span className="text-xs font-black uppercase tracking-wider text-[#525862] dark:text-zinc-400">
+                      Descuentos Permanentes
+                    </span>
+                    <div className="space-y-2 text-xs">
+                      <div className="flex items-center justify-between p-2 rounded-xl bg-slate-50 dark:bg-zinc-800/50">
+                        <span className="text-[#777777] dark:text-zinc-400">Especialistas adicionales:</span>
+                        <strong className="text-[#02B2C6] font-black">{currentPlan?.specialistDiscountPercent}% DESC.</strong>
+                      </div>
+                      <div className="flex items-center justify-between p-2 rounded-xl bg-slate-50 dark:bg-zinc-800/50">
+                        <span className="text-[#777777] dark:text-zinc-400">Laboratorio 24 Horas:</span>
+                        <strong className="text-emerald-600 font-black">{currentPlan?.labDiscountPercent}% DESC.</strong>
+                      </div>
+                      <div className="flex items-center justify-between p-2 rounded-xl bg-slate-50 dark:bg-zinc-800/50">
+                        <span className="text-[#777777] dark:text-zinc-400">Espacio Estética Zenit:</span>
+                        <strong className="text-pink-600 font-black">{currentPlan?.aestheticDiscountPercent}% DESC.</strong>
+                      </div>
+                      <div className="flex items-center justify-between p-2 rounded-xl bg-slate-50 dark:bg-zinc-800/50">
+                        <span className="text-[#777777] dark:text-zinc-400">Hospitalización & Quirófano:</span>
+                        <strong className="text-purple-600 font-black">{currentPlan?.hospitalizationDiscountPercent}% DESC.</strong>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="pt-3 border-t border-zinc-100 dark:border-zinc-800 text-[11px] text-zinc-500">
+                    Aplica ilimitadamente en cada atención médica durante la vigencia.
+                  </div>
+                </div>
+              </div>
+
+              {/* 2. Medidores de Cobertura Restante */}
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="text-base font-black text-zinc-900 dark:text-zinc-100 flex items-center gap-2">
+                      <ShieldCheck className="w-5 h-5 text-[#02B2C6]" />
+                      <span>Cupos de Cobertura Disponibles al 100%</span>
+                    </h3>
+                    <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                      Consultas y exámenes que puedes utilizar sin costo adicional durante el año (compartidas con el grupo familiar)
+                    </p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4">
+                  {/* Medicina General */}
+                  <div className="p-4 rounded-2xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-sm flex flex-col justify-between">
+                    <div className="flex items-center justify-between text-zinc-500 mb-2">
+                      <Stethoscope className="w-4 h-4 text-[#02B2C6]" />
+                      <span className="text-[10px] font-bold uppercase">General</span>
+                    </div>
+                    <div>
+                      <div className="text-xl sm:text-2xl font-black text-zinc-900 dark:text-zinc-100">
+                        {patientMembership.benefitsRemaining.general === 'ilimitadas'
+                          ? 'ILIMITADAS'
+                          : patientMembership.benefitsRemaining.general}
+                      </div>
+                      <span className="text-[10px] text-zinc-500 block leading-tight">
+                        Medicina General / Familiar
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Especialistas */}
+                  <div className="p-4 rounded-2xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-sm flex flex-col justify-between">
+                    <div className="flex items-center justify-between text-zinc-500 mb-2">
+                      <Award className="w-4 h-4 text-emerald-500" />
+                      <span className="text-[10px] font-bold uppercase">Especialistas</span>
+                    </div>
+                    <div>
+                      <div className="text-xl sm:text-2xl font-black text-emerald-600 dark:text-emerald-400">
+                        {patientMembership.benefitsRemaining.specialist}
+                      </div>
+                      <span className="text-[10px] text-zinc-500 block leading-tight">
+                        31 Especialidades Clínicas
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Odontología */}
+                  <div className="p-4 rounded-2xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-sm flex flex-col justify-between">
+                    <div className="flex items-center justify-between text-zinc-500 mb-2">
+                      <Smile className="w-4 h-4 text-cyan-500" />
+                      <span className="text-[10px] font-bold uppercase">Odontología</span>
+                    </div>
+                    <div>
+                      <div className="text-xl sm:text-2xl font-black text-cyan-600 dark:text-cyan-400">
+                        {patientMembership.benefitsRemaining.dental}
+                      </div>
+                      <span className="text-[10px] text-zinc-500 block leading-tight">
+                        Profilaxis ultrasónicas
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Laboratorio */}
+                  <div className="p-4 rounded-2xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-sm flex flex-col justify-between">
+                    <div className="flex items-center justify-between text-zinc-500 mb-2">
+                      <FlaskConical className="w-4 h-4 text-purple-500" />
+                      <span className="text-[10px] font-bold uppercase">Laboratorio</span>
+                    </div>
+                    <div>
+                      <div className="text-xl sm:text-2xl font-black text-purple-600 dark:text-purple-400">
+                        {patientMembership.benefitsRemaining.lab}
+                      </div>
+                      <span className="text-[10px] text-zinc-500 block leading-tight">
+                        Perfiles clínicos 24h
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Cardiología */}
+                  <div className="p-4 rounded-2xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-sm flex flex-col justify-between">
+                    <div className="flex items-center justify-between text-zinc-500 mb-2">
+                      <HeartPulse className="w-4 h-4 text-rose-500" />
+                      <span className="text-[10px] font-bold uppercase">Cardio</span>
+                    </div>
+                    <div>
+                      <div className="text-xl sm:text-2xl font-black text-rose-600 dark:text-rose-400">
+                        {patientMembership.benefitsRemaining.cardio}
+                      </div>
+                      <span className="text-[10px] text-zinc-500 block leading-tight">
+                        ECG / Ecocardiograma
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Estética */}
+                  <div className="p-4 rounded-2xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-sm flex flex-col justify-between">
+                    <div className="flex items-center justify-between text-zinc-500 mb-2">
+                      <Sparkles className="w-4 h-4 text-pink-500" />
+                      <span className="text-[10px] font-bold uppercase">Estética</span>
+                    </div>
+                    <div>
+                      <div className="text-xl sm:text-2xl font-black text-pink-600 dark:text-pink-400">
+                        {patientMembership.benefitsRemaining.aesthetic}
+                      </div>
+                      <span className="text-[10px] text-zinc-500 block leading-tight">
+                        Hidrafacial / Tratamiento
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* 3. Beneficiarios Anclados (Grupo Familiar) */}
+              <div className="space-y-4 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-3xl p-6 shadow-sm">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-zinc-100 dark:border-zinc-800">
+                  <div>
+                    <h3 className="text-base font-black text-zinc-900 dark:text-zinc-100 flex items-center gap-2">
+                      <Users className="w-5 h-5 text-[#02B2C6]" />
+                      <span>Grupo Familiar & Beneficiarios Anclados</span>
+                    </h3>
+                    <p className="text-xs text-zinc-500">
+                      Capacidad del plan: {currentPlan?.affiliatesDescription} • Comparten la cuota de consultas del plan
+                    </p>
+                  </div>
+
+                  {!patientMembership.isBeneficiary && (
+                    <button
+                      onClick={() => {
+                        setAddBenError('')
+                        setIsAddBenModalOpen(true)
+                      }}
+                      className="px-3.5 py-2 rounded-xl bg-slate-100 dark:bg-zinc-800 hover:bg-[#02B2C6] hover:text-white text-xs font-bold transition flex items-center gap-1.5 self-start sm:self-auto cursor-pointer"
+                    >
+                      <UserPlus className="w-4 h-4" />
+                      <span>Anclar Beneficiario</span>
+                    </button>
+                  )}
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                  {/* Titular Card */}
+                  <div className="p-4 rounded-2xl bg-cyan-50/50 dark:bg-cyan-950/20 border border-cyan-200/60 dark:border-cyan-800/40 space-y-1">
+                    <span className="text-[10px] font-extrabold uppercase text-[#02B2C6] tracking-wider block">
+                      Titular Principal
+                    </span>
+                    <strong className="text-sm font-bold text-zinc-900 dark:text-zinc-100 block">
+                      {patientMembership.patientName}
+                    </strong>
+                    <span className="text-xs text-zinc-500 block font-mono">
+                      C.I: {patientMembership.patientCedula}
+                    </span>
+                    <span className="text-[11px] text-zinc-500 block">
+                      {patientMembership.patientPhone}
+                    </span>
+                  </div>
+
+                  {/* Lista de Beneficiarios */}
+                  {(patientMembership.beneficiaries || []).map((ben, idx) => (
+                    <div
+                      key={idx}
+                      className="p-4 rounded-2xl bg-slate-50 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-800 flex items-start justify-between gap-2"
+                    >
+                      <div className="space-y-1">
+                        <span className="text-[10px] font-extrabold uppercase text-emerald-600 dark:text-emerald-400 tracking-wider block">
+                          Beneficiario #{idx + 1} ({ben.relationship})
+                        </span>
+                        <strong className="text-sm font-bold text-zinc-900 dark:text-zinc-100 block">
+                          {ben.name}
+                        </strong>
+                        <span className="text-xs text-zinc-500 block font-mono">
+                          C.I: {ben.cedula}
+                        </span>
+                        {ben.phone && (
+                          <span className="text-[11px] text-zinc-500 block">{ben.phone}</span>
+                        )}
+                      </div>
+
+                      {!patientMembership.isBeneficiary && (
+                        <button
+                          onClick={() => handleRemoveBeneficiary(ben.cedula)}
+                          title="Desvincular beneficiario"
+                          className="p-1.5 rounded-lg text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      )}
+                    </div>
+                  ))}
+
+                  {/* Espacios disponibles para agregar familiares */}
+                  {Array.from({
+                    length: Math.max(
+                      0,
+                      (currentPlan?.affiliatesCount || 1) - 1 - (patientMembership.beneficiaries?.length || 0)
+                    ),
+                  }).map((_, i) => (
+                    <div
+                      key={i}
+                      onClick={() => !patientMembership.isBeneficiary && setIsAddBenModalOpen(true)}
+                      className="p-4 rounded-2xl border-2 border-dashed border-zinc-200 dark:border-zinc-800 hover:border-[#02B2C6] flex flex-col items-center justify-center text-center text-zinc-400 hover:text-[#02B2C6] transition cursor-pointer min-h-[100px]"
+                    >
+                      <UserPlus className="w-6 h-6 mb-1" />
+                      <span className="text-xs font-bold">Cupo Disponible</span>
+                      <span className="text-[10px]">Anclar familiar adicional</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* 4. Historial de Coberturas Utilizadas */}
+              <div className="space-y-4 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-3xl p-6 shadow-sm">
+                <div className="flex items-center justify-between pb-3 border-b border-zinc-100 dark:border-zinc-800">
+                  <div>
+                    <h3 className="text-base font-black text-zinc-900 dark:text-zinc-100 flex items-center gap-2">
+                      <History className="w-5 h-5 text-[#02B2C6]" />
+                      <span>Historial de Uso de Coberturas</span>
+                    </h3>
+                    <p className="text-xs text-zinc-500">
+                      Registro de todas las consultas, exámenes y aranceles cubiertos por la membresía
+                    </p>
+                  </div>
+                  <span className="text-xs font-bold px-3 py-1 rounded-full bg-slate-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300">
+                    {patientMembership.coverageHistory?.length || 0} consumos
+                  </span>
+                </div>
+
+                {(!patientMembership.coverageHistory || patientMembership.coverageHistory.length === 0) ? (
+                  <div className="py-8 text-center text-zinc-400 text-xs">
+                    Aún no se registran consumos de cobertura en este período.
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left text-xs">
+                      <thead className="bg-slate-50 dark:bg-zinc-800/80 text-[10.5px] uppercase font-bold text-zinc-500">
+                        <tr>
+                          <th className="py-3 px-4">Fecha</th>
+                          <th className="py-3 px-4">Servicio / Atención</th>
+                          <th className="py-3 px-4">Paciente (Titular / Beneficiario)</th>
+                          <th className="py-3 px-4">Médico / Especialidad</th>
+                          <th className="py-3 px-4">Tipo Cobertura</th>
+                          <th className="py-3 px-4 text-right">Ahorro ($ USD)</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
+                        {patientMembership.coverageHistory.map((item) => (
+                          <tr key={item.id} className="hover:bg-slate-50/60 dark:hover:bg-zinc-800/40">
+                            <td className="py-3 px-4 font-mono text-zinc-500 whitespace-nowrap">{item.date}</td>
+                            <td className="py-3 px-4 font-bold text-zinc-900 dark:text-zinc-100">{item.serviceName}</td>
+                            <td className="py-3 px-4">
+                              <span className="font-medium text-zinc-800 dark:text-zinc-200">{item.consumedBy.name}</span>
+                              <span className="text-[10px] text-zinc-500 block font-mono">
+                                {item.consumedBy.isTitular ? 'Titular' : `Beneficiario (${item.consumedBy.relationship || 'Familiar'})`}
+                              </span>
+                            </td>
+                            <td className="py-3 px-4 text-zinc-600 dark:text-zinc-400">{item.doctorName || 'Equipo Médico Zenit'}</td>
+                            <td className="py-3 px-4">
+                              {item.wasFullyCovered ? (
+                                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">
+                                  ✓ 100% Exonerado
+                                </span>
+                              ) : (
+                                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-cyan-100 text-[#02B2C6]">
+                                  {item.discountPercent}% Descuento
+                                </span>
+                              )}
+                            </td>
+                            <td className="py-3 px-4 text-right font-bold text-emerald-600 dark:text-emerald-400">
+                              + ${item.costSavedUsd?.toFixed(2)} USD
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+
+              {/* 5. Historial de Cambios de Plan */}
+              {patientMembership.planHistory && patientMembership.planHistory.length > 0 && (
+                <div className="space-y-3 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-3xl p-6 shadow-sm">
+                  <h3 className="text-sm font-black text-zinc-900 dark:text-zinc-100 flex items-center gap-2">
+                    <TrendingUp className="w-4 h-4 text-[#02B2C6]" />
+                    <span>Historial de Planes & Upgrades</span>
+                  </h3>
+                  <div className="space-y-2">
+                    {patientMembership.planHistory.map((ph, idx) => (
+                      <div
+                        key={idx}
+                        className="p-3 rounded-xl bg-slate-50 dark:bg-zinc-800/40 border border-zinc-100 dark:border-zinc-800 text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-2"
+                      >
+                        <div className="space-y-0.5">
+                          <span className="font-bold text-zinc-800 dark:text-zinc-200 uppercase">
+                            {ph.type === 'upgrade' ? '🚀 Upgrade de Plan' : ph.type === 'downgrade' ? '🔄 Cambio de Plan' : 'Afiliación'} ({ph.fromTier.toUpperCase()} → {ph.toTier.toUpperCase()})
+                          </span>
+                          <p className="text-[11px] text-zinc-500">{ph.note}</p>
+                        </div>
+                        <span className="text-[10.5px] font-mono text-zinc-400 whitespace-nowrap">{ph.date}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* MODAL: CAMBIO / UPGRADE DE PLAN */}
+          {isChangePlanOpen && patientMembership && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in">
+              <div className="relative w-full max-w-lg bg-white dark:bg-zinc-900 rounded-3xl p-6 sm:p-8 shadow-2xl border border-zinc-200 dark:border-zinc-800 space-y-5">
+                <div className="flex items-start justify-between gap-4 border-b border-zinc-100 dark:border-zinc-800 pb-3">
+                  <div>
+                    <span className="text-[10px] font-black uppercase text-[#02B2C6] tracking-wider">
+                      Gestión de Afiliación
+                    </span>
+                    <h3 className="text-lg font-black text-zinc-900 dark:text-zinc-100">
+                      Subir o Cambiar de Plan Zenit
+                    </h3>
+                  </div>
+                  <button
+                    onClick={() => setIsChangePlanOpen(false)}
+                    className="w-8 h-8 rounded-full bg-slate-100 dark:bg-zinc-800 flex items-center justify-center text-zinc-500 hover:text-zinc-800"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+
+                <div className="space-y-3">
+                  <label className="text-xs font-bold text-zinc-700 dark:text-zinc-300">
+                    Selecciona tu nuevo plan:
+                  </label>
+                  <div className="grid grid-cols-3 gap-2">
+                    {(['bronce', 'plata', 'oro'] as MembershipTier[]).map((t) => {
+                      const p = MEMBERSHIP_PLANS.find((x) => x.id === t)
+                      const isCurrent = patientMembership.tier === t
+                      const isSelected = selectedNewTier === t
+
+                      return (
+                        <button
+                          key={t}
+                          type="button"
+                          onClick={() => setSelectedNewTier(t)}
+                          className={`p-3 rounded-2xl border text-center transition cursor-pointer ${
+                            isSelected
+                              ? 'border-[#02B2C6] bg-cyan-50/50 dark:bg-cyan-950/30 text-[#02B2C6] font-bold shadow-sm'
+                              : 'border-zinc-200 dark:border-zinc-700 hover:bg-slate-50'
+                          }`}
+                        >
+                          <span className="text-xs uppercase font-extrabold block">{p?.name}</span>
+                          <span className="text-sm font-black block mt-1">${p?.priceAnnual}/año</span>
+                          {isCurrent && (
+                            <span className="text-[9px] bg-zinc-200 dark:bg-zinc-700 text-zinc-700 dark:text-zinc-300 px-1.5 py-0.5 rounded font-bold mt-1 inline-block">
+                              Actual
+                            </span>
+                          )}
+                        </button>
+                      )
+                    })}
+                  </div>
+                </div>
+
+                {/* ADVERTENCIA DE POLÍTICA: NO SE DEVUELVE EL DINERO */}
+                <div className="p-3.5 rounded-2xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/60 text-xs text-amber-800 dark:text-amber-300 space-y-1">
+                  <div className="flex items-center gap-1.5 font-black uppercase text-[10.5px]">
+                    <AlertCircle className="w-4 h-4 shrink-0" />
+                    <span>Políticas de Afiliación & Modificaciones</span>
+                  </div>
+                  <p className="text-[11px] leading-relaxed">
+                    Puedes subir o bajar de plan en cualquier momento. Al hacer upgrade se sumará la diferencia de coberturas. <strong>Conforme a los términos del programa, los cambios o descensos de plan no conllevan reembolso monetario.</strong>
+                  </p>
+                </div>
+
+                {changePlanFeedback && (
+                  <div className="p-3 rounded-xl bg-cyan-50 text-[#02B2C6] text-xs font-bold text-center">
+                    {changePlanFeedback}
+                  </div>
+                )}
+
+                <div className="flex items-center justify-end gap-3 pt-3 border-t border-zinc-100 dark:border-zinc-800">
+                  <button
+                    type="button"
+                    onClick={() => setIsChangePlanOpen(false)}
+                    className="px-4 py-2 rounded-xl border border-zinc-200 dark:border-zinc-700 text-xs font-bold"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="button"
+                    disabled={changePlanSubmitting || selectedNewTier === patientMembership.tier}
+                    onClick={handleChangePlanSubmit}
+                    className="px-5 py-2.5 rounded-xl bg-[#02B2C6] hover:bg-[#029baa] text-white text-xs font-black uppercase tracking-wider shadow-md transition disabled:opacity-50 cursor-pointer"
+                  >
+                    {changePlanSubmitting ? 'Actualizando...' : 'Confirmar Cambio de Plan'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* MODAL: ANCLAR BENEFICIARIO */}
+          {isAddBenModalOpen && patientMembership && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in">
+              <div className="relative w-full max-w-md bg-white dark:bg-zinc-900 rounded-3xl p-6 shadow-2xl border border-zinc-200 dark:border-zinc-800 space-y-4">
+                <div className="flex items-start justify-between gap-4 border-b border-zinc-100 dark:border-zinc-800 pb-3">
+                  <div>
+                    <span className="text-[10px] font-black uppercase text-emerald-600 tracking-wider">
+                      Grupo Familiar
+                    </span>
+                    <h3 className="text-lg font-black text-zinc-900 dark:text-zinc-100">
+                      Anclar Nuevo Beneficiario
+                    </h3>
+                  </div>
+                  <button
+                    onClick={() => setIsAddBenModalOpen(false)}
+                    className="w-8 h-8 rounded-full bg-slate-100 dark:bg-zinc-800 flex items-center justify-center text-zinc-500 hover:text-zinc-800"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+
+                <form onSubmit={handleAddBeneficiarySubmit} className="space-y-3">
+                  <div>
+                    <label className="text-[10px] font-bold uppercase text-zinc-500">Nombre Completo</label>
+                    <input
+                      type="text"
+                      required
+                      value={newBenName}
+                      onChange={(e) => setNewBenName(e.target.value)}
+                      placeholder="Ej. María Pérez"
+                      className="w-full px-3 py-2 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-xs text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-[#02B2C6]"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-[10px] font-bold uppercase text-zinc-500">Cédula de Identidad</label>
+                    <input
+                      type="text"
+                      required
+                      value={newBenCedula}
+                      onChange={(e) => setNewBenCedula(e.target.value)}
+                      placeholder="Ej. V-20123456"
+                      className="w-full px-3 py-2 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-xs text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-[#02B2C6]"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-[10px] font-bold uppercase text-zinc-500">Parentesco con el Titular</label>
+                    <select
+                      value={newBenRel}
+                      onChange={(e) => setNewBenRel(e.target.value)}
+                      className="w-full px-3 py-2 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-xs text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-[#02B2C6]"
+                    >
+                      <option value="Cónyuge / Pareja">Cónyuge / Pareja</option>
+                      <option value="Hijo / Hija">Hijo / Hija</option>
+                      <option value="Padre / Madre">Padre / Madre</option>
+                      <option value="Hermano / Hermana">Hermano / Hermana</option>
+                      <option value="Familiar Directo">Familiar Directo</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="text-[10px] font-bold uppercase text-zinc-500">Teléfono (Opcional)</label>
+                    <input
+                      type="tel"
+                      value={newBenPhone}
+                      onChange={(e) => setNewBenPhone(e.target.value)}
+                      placeholder="+58 412 0000000"
+                      className="w-full px-3 py-2 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-xs text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-[#02B2C6]"
+                    />
+                  </div>
+
+                  {addBenError && (
+                    <p className="text-xs text-rose-500 font-bold">{addBenError}</p>
+                  )}
+
+                  <div className="flex items-center justify-end gap-3 pt-3 border-t border-zinc-100 dark:border-zinc-800">
+                    <button
+                      type="button"
+                      onClick={() => setIsAddBenModalOpen(false)}
+                      className="px-4 py-2 rounded-xl border border-zinc-200 dark:border-zinc-700 text-xs font-bold"
+                    >
+                      Cancelar
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={addBenSubmitting}
+                      className="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black uppercase tracking-wider shadow-md transition disabled:opacity-50 cursor-pointer"
+                    >
+                      {addBenSubmitting ? 'Guardando...' : 'Anclar al Plan'}
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          )}
+        </section>
       )}
 
       {/* 4. SECCIÓN "CATÁLOGO DE SERVICIOS" (AISLADA) */}

@@ -30,14 +30,17 @@ export function getDoctorsForService(
   return areaDoctors.filter((doc) => {
     const spec = (doc.specialty_name || '').toLowerCase()
 
-    // --- SALUD / ESPECIALIDADES CLÍNICAS ---
-    // Oftalmología / Evaluación visual
-    if (srvName.includes('oftalmo') || srvName.includes('visual') || srvName.includes('ojo')) {
+    // --- SALUD / ESPECIALIDADES CLÍNICAS & QUIRÚRGICAS ---
+    // Oftalmología / Evaluación visual / Cirugía Oculoplástica
+    if (srvName.includes('oftalmo') || srvName.includes('visual') || srvName.includes('ojo') || srvName.includes('oculoplást')) {
       return spec.includes('oftalmólog') || spec.includes('oftalmolog') || spec.includes('visual')
     }
 
-    // Cardiología / Ecocardiograma
-    if (srvName.includes('cardio') || srvName.includes('ecocardio')) {
+    // Cardiología Infantil vs Adulta
+    if (srvName.includes('cardio')) {
+      if (srvName.includes('infantil') || srvName.includes('pediátr') || srvName.includes('niñ')) {
+        return (spec.includes('cardiólog') || spec.includes('cardiolog')) && (spec.includes('infantil') || spec.includes('pediátr'))
+      }
       return spec.includes('cardiólog') || spec.includes('cardiolog') || spec.includes('ecocardio')
     }
 
@@ -52,19 +55,89 @@ export function getDoctorsForService(
       return spec.includes('ginecol') || spec.includes('obstet')
     }
 
-    // Odontología & Salud Bucal
+    // Odontología, Odontopediatría & Patología Bucal
+    if (srvName.includes('odontopediatr')) {
+      return spec.includes('odontopediatr') || (spec.includes('odont') && spec.includes('pediatr'))
+    }
+    if (srvName.includes('patología bucal') || srvName.includes('patologia bucal')) {
+      return spec.includes('patolog') || spec.includes('bucal')
+    }
     if (
       srvName.includes('odonto') ||
       srvName.includes('bucal') ||
       srvName.includes('dental') ||
-      srvName.includes('sonrisa')
+      srvName.includes('sonrisa') ||
+      srvName.includes('ortodoncia')
     ) {
-      return spec.includes('odont') || spec.includes('bucal') || spec.includes('dental')
+      return spec.includes('odont') || spec.includes('bucal') || spec.includes('dental') || spec.includes('ortodonc')
+    }
+
+    // Pediatría general
+    if (srvName.includes('pediatría') || srvName.includes('pediatria')) {
+      return spec.includes('pediatr') && !spec.includes('cardio') && !spec.includes('odonto')
+    }
+
+    // Cirugías especializadas
+    if (srvName.includes('cardiovascular')) {
+      return spec.includes('cardiovascular')
+    }
+    if (srvName.includes('oncológica') || srvName.includes('oncologica')) {
+      return spec.includes('cirujano oncólogo') || spec.includes('cirugia oncologica') || spec.includes('oncol')
+    }
+    if (srvName.includes('neurocirugía') || srvName.includes('neurocirugia')) {
+      return spec.includes('neurociruj') || spec.includes('neurocirug')
+    }
+    if (srvName.includes('traumatología') || srvName.includes('traumatologia') || srvName.includes('mano')) {
+      return spec.includes('traumatól') || spec.includes('traumatol') || spec.includes('ortoped')
+    }
+    if (srvName.includes('urología') || srvName.includes('urologia')) {
+      return spec.includes('urólog') || spec.includes('urolog')
+    }
+    if (srvName.includes('neumonología') || srvName.includes('neumonologia')) {
+      return spec.includes('neumonól') || spec.includes('neumonol') || spec.includes('pulmonar')
+    }
+    if (srvName.includes('gastroenterología') || srvName.includes('gastroenterologia')) {
+      return spec.includes('gastro')
+    }
+    if (srvName.includes('oncología médica') || srvName.includes('oncologia medica')) {
+      return spec.includes('oncólog') || spec.includes('oncolog')
+    }
+    if (srvName.includes('endocrinología') || srvName.includes('endocrinologia')) {
+      return spec.includes('endocrinól') || spec.includes('endocrinol')
+    }
+    if (srvName.includes('neurología') || srvName.includes('neurologia')) {
+      return (spec.includes('neurólog') || spec.includes('neurolog')) && !spec.includes('neurociruj')
+    }
+    if (srvName.includes('nefrología') || srvName.includes('nefrologia') || srvName.includes('diálisis')) {
+      return spec.includes('nefrólog') || spec.includes('nefrolog') || spec.includes('diálisis')
+    }
+    if (srvName.includes('infectología') || srvName.includes('infectologia')) {
+      return spec.includes('infectól') || spec.includes('infectol')
+    }
+    if (srvName.includes('nutrición') || srvName.includes('nutricion')) {
+      return spec.includes('nutric') || spec.includes('diet')
+    }
+    if (srvName.includes('psicología') || srvName.includes('psicologia')) {
+      return spec.includes('psicól') || spec.includes('psicol')
+    }
+    if (srvName.includes('fisioterapia') || srvName.includes('rehabilitación') || srvName.includes('rehabilitacion')) {
+      return spec.includes('fisioterap') || spec.includes('fisiatra') || spec.includes('kinesio')
+    }
+    if (srvName.includes('emergencia') || srvName.includes('urgencia')) {
+      return spec.includes('emergenc') || spec.includes('urgenc') || spec.includes('general') || spec.includes('internista')
+    }
+    if (srvName.includes('laboratorio')) {
+      return spec.includes('bioanal') || spec.includes('laboratorio')
     }
 
     // Medicina Interna
     if (srvName.includes('interna')) {
       return spec.includes('internista') || spec.includes('interna')
+    }
+
+    // Cirugía General
+    if (srvName.includes('cirugía general') || srvName.includes('cirugia general')) {
+      return spec.includes('cirujano') || spec.includes('cirugía general') || spec.includes('cirugia general')
     }
 
     // Consulta General / Medicina Familiar

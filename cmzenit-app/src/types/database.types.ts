@@ -1,5 +1,98 @@
 export type UserRole = 'paciente' | 'secretaria' | 'doctor' | 'admin'
 export type ClinicArea = 'salud' | 'estetica'
+export type MembershipTier = 'bronce' | 'plata' | 'oro'
+
+export interface MembershipPlan {
+  id: MembershipTier
+  name: string
+  tagline: string
+  badge: string
+  color: string
+  borderClass: string
+  bgLightClass: string
+  accentColor: string
+  priceAnnual: number
+  priceMonthly: number
+  affiliatesCount: number
+  affiliatesDescription: string
+  generalConsultsCount: number | 'Ilimitadas'
+  specialistConsultsCount: number
+  specialtiesCoveredText: string
+  labDiscountPercent: number
+  specialistDiscountPercent: number
+  aestheticDiscountPercent: number
+  hospitalizationDiscountPercent: number
+  includedServices: string[]
+  highlightedFeatures: string[]
+  recommendedFor: string
+}
+
+export interface MembershipBeneficiary {
+  id?: string
+  name: string
+  cedula: string
+  relationship: string
+  phone?: string
+  birthDate?: string
+  addedAt: string
+}
+
+export interface CoverageUsageItem {
+  id: string
+  date: string
+  serviceName: string
+  category: ClinicArea | 'laboratorio' | 'odontologia' | 'cardiologia'
+  consumedBy: {
+    name: string
+    cedula: string
+    isTitular: boolean
+    relationship?: string
+  }
+  doctorName?: string
+  benefitType: 'general' | 'specialist' | 'dental' | 'lab' | 'cardio' | 'aesthetic' | 'descuento'
+  discountPercent?: number
+  wasFullyCovered: boolean
+  costSavedUsd: number
+  notes?: string
+}
+
+export interface PlanChangeHistory {
+  date: string
+  fromTier: MembershipTier
+  toTier: MembershipTier
+  type: 'upgrade' | 'downgrade' | 'renovacion'
+  priceDifferenceUsd: number
+  note: string
+}
+
+export interface PatientMembership {
+  id: string
+  patientCedula: string
+  patientName: string
+  patientEmail: string
+  patientPhone: string
+  tier: MembershipTier
+  billingCycle: 'anual' | 'mensual'
+  priceUsd: number
+  startDate: string
+  expiryDate: string
+  status: 'activa' | 'vencida' | 'pendiente_pago'
+  beneficiaries: MembershipBeneficiary[]
+  benefitsRemaining: {
+    general: number | 'ilimitadas'
+    specialist: number
+    dental: number
+    lab: number
+    cardio: number
+    aesthetic: number
+  }
+  consultsRemaining: {
+    general: number | 'ilimitadas'
+    specialist: number
+  }
+  coverageHistory: CoverageUsageItem[]
+  planHistory: PlanChangeHistory[]
+}
 export type AppointmentStatus =
   | 'pendiente'
   | 'confirmada'

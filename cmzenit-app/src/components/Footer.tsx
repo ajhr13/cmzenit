@@ -185,6 +185,14 @@ export function Footer() {
             <span className="hover:text-white transition">Privacidad del Paciente</span>
             <span>•</span>
             <Link
+              href="/afiliados"
+              className="text-[#02B2C6] hover:text-white transition font-bold"
+              title="Programa de Membresías y Afiliados Zenit"
+            >
+              <span>Afiliados Zenit Vital</span>
+            </Link>
+            <span>•</span>
+            <Link
               href="/login/personal"
               className="text-slate-400 hover:text-[#02B2C6] transition flex items-center gap-1"
               title="Acceso para Médicos Especialistas y Recepción"
